@@ -1,0 +1,81 @@
+[project]
+name = "cryptic-pet-backend"
+version = "0.1.0"
+requires-python = ">=3.12,<4.0"
+dependencies = [
+    # 核心 Web 框架
+    "fastapi>=0.111.0,<1.0.0",
+    "sqlmodel>=0.0.21,<1.0.0",
+    # PostgreSQL 異步驅動
+    "psycopg[binary]>=3.1.19,<4.0.0",
+    # 工具與輔助
+    "python-multipart>=0.0.9,<1.0.0",
+    "pydantic>=2.8.2,<3.0.0",
+    "pydantic-settings>=2.4.0,<3.0.0",
+    "passlib[bcrypt]>=1.7.4,<2.0.0",
+    "pyjwt>=2.8.0,<3.0.0",
+    "cryptography>=43.0.0,<44.0.0",
+    "aiofiles>=23.2.1,<24.0.0",
+    # 郵件相關
+    "email-validator>=2.2.0,<3.0.0",
+    "emails>=0.6,<1.0",
+    "jinja2>=3.1.4,<4.0.0",
+    # API 客戶端與重試
+    "httpx>=0.27.0,<1.0.0",
+    "tenacity>=8.5.0,<9.0.0",
+    # 監控與排程
+    "sentry-sdk[fastapi]>=2.9.0,<3.0.0",
+    "apscheduler>=3.10.4,<4.0.0",
+    # 第三方服務 SDK
+    "openai>=1.35.13,<2.0.0",
+    "python-telegram-bot>=21.3,<22.0.0",
+    "uvicorn>=0.35.0",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.3.2,<9.0.0",
+    "mypy>=1.11.0,<2.0.0",
+    "ruff>=0.5.5,<1.0.0",
+    "pre-commit>=3.7.1,<4.0.0",
+    "types-passlib>=1.7.7.20240106,<2.0.0.0",
+    "coverage>=7.6.0,<8.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.mypy]
+strict = true
+exclude = ["venv", ".venv", "alembic"]
+
+[tool.ruff]
+# 將目標版本與 requires-python 同步
+target-version = "py312"
+exclude = ["alembic"]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+    "ARG001", # unused arguments in functions
+]
+ignore = [
+    "E501",  # line too long, handled by formatter
+    "B008",  # do not perform function calls in argument defaults
+    "W191",  # indentation contains tabs
+    "B904",  # Allow raising exceptions without `from e`, for HTTPException
+]
+
+[tool.ruff.lint.pyupgrade]
+# Preserve types, even if a file imports `from __future__ import annotations`.
+keep-runtime-typing = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
