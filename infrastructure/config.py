@@ -63,7 +63,7 @@ class Settings(BaseSettings):
 
     @computed_field  # type: ignore[prop-decorator]
     @property
-    def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
+    def database_url_object(self) -> PostgresDsn:
         return MultiHostUrl.build(
             scheme="postgresql+psycopg",
             username=self.POSTGRES_USER,
@@ -72,6 +72,14 @@ class Settings(BaseSettings):
             port=self.POSTGRES_PORT,
             path=self.POSTGRES_DB,
         )
+
+    @computed_field
+    @property
+    def SQLALCHEMY_DATABASE_URI(self) -> str:
+        """
+        提供給 SQLAlchemy 使用的、保證為字串格式的資料庫 URI。
+        """
+        return str(self.database_url_object)
 
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False

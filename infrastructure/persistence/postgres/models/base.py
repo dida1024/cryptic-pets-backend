@@ -7,6 +7,10 @@ from sqlmodel import Field, SQLModel
 
 
 class BaseModel(SQLModel):
+    model_config = {
+        "arbitrary_types_allowed": True  # 允许使用任意类型，包括 datetime
+    }
+
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
 
     created_at: datetime = Field(

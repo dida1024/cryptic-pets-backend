@@ -1,5 +1,7 @@
+from loguru import logger
 import sentry_sdk
 from fastapi import FastAPI
+from fastapi.concurrency import asynccontextmanager
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 
@@ -19,11 +21,21 @@ def custom_generate_unique_id(route: APIRoute) -> str:
 if settings.SENTRY_DSN and settings.ENVIRONMENT != "local":
     sentry_sdk.init(dsn=str(settings.SENTRY_DSN), enable_tracing=True)
 
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    logger.info("Starting application...")
+    logger.info("Initializing database...")
+    from infrastructure.persistence.postgres.init_db import init_db
+    init_db()
+    yield
+    logger.info("Application shutdown complete.")
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     root_path=settings.ROOTPATH,
     generate_unique_id_function=custom_generate_unique_id,
+    lifespan=lifespan
 )
 
 app.add_exception_handler(BizException, biz_exception_handler)

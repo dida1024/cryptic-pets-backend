@@ -1,8 +1,7 @@
 from sqlmodel import SQLModel, create_engine
 
 from infrastructure.config import settings
-
-from .models import *  # noqa: F403
+from infrastructure.persistence.postgres.models.user import UserModel  # noqa: F401
 
 engine = create_engine(settings.SQLALCHEMY_DATABASE_URI, echo=True, future=True)
 
