@@ -1,8 +1,8 @@
-from loguru import logger
 import sentry_sdk
 from fastapi import FastAPI
 from fastapi.concurrency import asynccontextmanager
 from fastapi.routing import APIRoute
+from loguru import logger
 from starlette.middleware.cors import CORSMiddleware
 
 from infrastructure.config import settings
