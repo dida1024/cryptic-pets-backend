@@ -8,6 +8,7 @@ dependencies = [
     "sqlmodel>=0.0.21,<1.0.0",
     # PostgreSQL 異步驅動
     "psycopg[binary]>=3.1.19,<4.0.0",
+    "asyncpg>=0.29.0,<1.0.0",
     # 工具與輔助
     "python-multipart>=0.0.9,<1.0.0",
     "pydantic>=2.8.2,<3.0.0",

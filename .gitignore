@@ -1,12 +1,68 @@
-# Python-generated files
-__pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
+# Python
+*.py[cod]
+*.so
+*.egg
 *.egg-info
+*.log
+*.pot
+*.pyc
+__pycache__/
+.Python
+.eggs/
+.pytest_cache/
+.coverage
+.coverage.*
+.env
+.python-version
+.tox/
+.mypy_cache/
+.ruff_cache/
 
-# Virtual environments
-.venv
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*.bak
+*.orig
 
-.idea
+# FastAPI
+.env
+.env.*
+logs/
+media/
+static/
+tmp/
+
+# Database
+*.sqlite3
+*.db
+
+# System
+.DS_Store
+Thumbs.db
+*.bak
+*.tmp
+*.swp
+
+# Dependencies
+node_modules/
+bower_components/
+
+# Documentation
+docs/_build/
+site/
+
+# Testing
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+
+# Deployment
+*.pem
+*.key
+*.crt

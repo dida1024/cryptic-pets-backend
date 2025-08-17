@@ -13,7 +13,7 @@ class BizException(Exception):
 async def biz_exception_handler(request: Request, exc: BizException):  # noqa: ARG001
     return JSONResponse(
         status_code=200,  # 不抛 HTTP 错
-        content=ApiResponse.error_response(
+        content=ApiResponse.error(
             message=exc.message,
             code=exc.code
         ).model_dump()
@@ -22,9 +22,9 @@ async def biz_exception_handler(request: Request, exc: BizException):  # noqa: A
 async def global_exception_handler(request: Request, exc: Exception): # noqa: ARG001
     return JSONResponse(
         status_code=200,  # 不抛 HTTP 错
-        content=ApiResponse.error_response(
-            message=exc,
+        content=ApiResponse.error(
+            message=str(exc),
             code=500,
-            data=exc
+            data=str(exc)
         ).model_dump()
     )

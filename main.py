@@ -26,7 +26,7 @@ async def lifespan(_: FastAPI):
     logger.info("Starting application...")
     logger.info("Initializing database...")
     from infrastructure.persistence.postgres.init_db import init_db
-    init_db()
+    await init_db()
     yield
     logger.info("Application shutdown complete.")
 

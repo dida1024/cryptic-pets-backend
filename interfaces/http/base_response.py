@@ -6,19 +6,17 @@ T = TypeVar('T')
 
 
 # 通用API响应模型
-class ApiResponse(BaseModel):
+class ApiResponse[T](BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    success: bool = True
     code: int = 200
     message: str = "操作成功"
     data: T | None = None
     meta: T | None  = None
 
     @classmethod
-    def success_response(cls, data: T = None, message: str = "操作成功", code: int = 200, meta: dict = None) -> "ApiResponse[T]":
+    def success(cls, data: T = None, message: str = "操作成功", code: int = 200, meta: dict = None) -> "ApiResponse[T]":
         return cls(
-            success=True,
             code=code,
             message=message,
             data=data,
@@ -26,7 +24,7 @@ class ApiResponse(BaseModel):
         )
 
     @classmethod
-    def error_response(cls, message: str = "操作失败", code: int = 400, data: Any = None) -> "ApiResponse[T]":
+    def error(cls, message: str = "操作失败", code: int = 400, data: Any = None) -> "ApiResponse[T]":
         """创建错误响应
         Args:
             message: 错误消息
@@ -41,13 +39,11 @@ class ApiResponse(BaseModel):
         if isinstance(message, Exception):
             message = str(message)
         return cls(
-            success=False,
             code=code,
             message=message,
             data=data
         )
-
-class PaginatedResponse(ApiResponse):
+class PaginatedResponse(ApiResponse[list[T]]):
     data: list[T] | None = None
     meta: dict = {"total": 0, "page": 1, "page_size": 10}
 

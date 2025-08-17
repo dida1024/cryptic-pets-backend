@@ -17,6 +17,10 @@ class BaseEntity(BaseModel):
         from_attributes=True,  # 支持从ORM模型创建
         validate_assignment=True,  # 在赋值时进行验证
         extra='forbid',  # 禁止额外字段
+        arbitrary_types_allowed=True,  # 允许任意类型
+        json_encoders={
+            UUID: str  # UUID序列化为字符串
+        }
     )
 
     def mark_as_deleted(self) -> None:
@@ -38,10 +42,3 @@ class BaseEntity(BaseModel):
         """Hash based on entity ID."""
         return hash(self.id) if self.id else super().__hash__()
 
-    class Config:
-        """Pydantic model configuration."""
-        validate_assignment = True  # 确保在赋值时进行验证
-        arbitrary_types_allowed = True  # 允许任意类型
-        json_encoders = {
-            UUID: str  # UUID序列化为字符串
-        }
