@@ -3,7 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel import SQLModel
 
 from infrastructure.config import settings
-from infrastructure.persistence.postgres.models.user import UserModel  # noqa: F401
 
 # 异步引擎
 async_engine: AsyncEngine = create_async_engine(
