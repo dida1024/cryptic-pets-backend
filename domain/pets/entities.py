@@ -46,8 +46,8 @@ class Morphology(BaseEntity):
     picture_list: list[Picture | None] = Field(default=[], description="List of pictures")
 
 
-class Pets(BaseEntity):
-    """Pets entity representing a pet in the system."""
+class Pet(BaseEntity):
+    """Pet entity representing a pet in the system."""
 
     name: I18nText = Field(..., description="Name of the pet")
     birth_date: datetime | None = Field(None, description="Birth date of the pet")

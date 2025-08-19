@@ -1,15 +1,11 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 
+from domain.common.repository import BaseRepository
 from domain.users.entities import User
 
 
-class UserRepository(ABC):
+class UserRepository(BaseRepository[User]):
     """用户仓储接口"""
-
-    @abstractmethod
-    async def get_by_id(self, user_id: str) -> User | None:
-        """根据ID获取用户"""
-        pass
 
     @abstractmethod
     async def get_by_username(self, username: str) -> User | None:
@@ -32,12 +28,7 @@ class UserRepository(ABC):
         pass
 
     @abstractmethod
-    async def delete(self, user_id: str) -> bool:
-        """删除用户（软删除）"""
-        pass
-
-    @abstractmethod
-    async def list_users(
+    async def list_all(
         self,
         page: int = 1,
         page_size: int = 10,

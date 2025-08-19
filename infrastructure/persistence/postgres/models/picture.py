@@ -5,7 +5,7 @@ from domain.common.value_objects import EntityTypeEnum, PictureEnum
 from infrastructure.persistence.postgres.models.base import BaseModel
 
 
-class Picture(BaseModel, table=True):
+class PictureModel(BaseModel, table=True):
     """Picture model representing a picture in the database."""
 
     __tablename__ = "pictures"

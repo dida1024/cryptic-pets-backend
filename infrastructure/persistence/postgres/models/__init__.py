@@ -1,18 +1,14 @@
-
-from .base import BaseModel
-from .common import Picture
-from .pets import (
-    Breed,
-    Gene,
-    MorphGeneMapping,
-    Morphology,
-    Pets,
-)
-from .user import UserModel
+# isort: skip_file
+from infrastructure.persistence.postgres.models.base import BaseModel
+from infrastructure.persistence.postgres.models.breed import Breed
+from infrastructure.persistence.postgres.models.gene import Gene
+from infrastructure.persistence.postgres.models.morphology import Morphology
+from infrastructure.persistence.postgres.models.morph_gene_mapping import MorphGeneMapping
+from infrastructure.persistence.postgres.models.pets import Pets
+from infrastructure.persistence.postgres.models.picture import Picture
 
 __all__ = [
     "BaseModel",
-    "UserModel",
     "Breed",
     "Gene",
     "MorphGeneMapping",

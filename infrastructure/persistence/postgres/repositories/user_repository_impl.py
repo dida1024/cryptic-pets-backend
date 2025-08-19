@@ -1,4 +1,4 @@
-
+from loguru import logger
 from sqlalchemy import func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -7,11 +7,17 @@ from domain.users.entities import User
 from domain.users.repository import UserRepository
 from domain.users.value_objects import UserTypeEnum
 from infrastructure.persistence.postgres.init_db import async_engine
+from infrastructure.persistence.postgres.mappers.user_mapper import UserMapper
 from infrastructure.persistence.postgres.models.user import UserModel
 
 
-class PostgreSQLUserRepository(UserRepository):
+class PostgreSQLUserRepositoryImpl(UserRepository):
     """PostgreSQL用户仓储实现"""
+
+    def __init__(self, session: AsyncSession, mapper: UserMapper):
+        self.session = session
+        self.mapper = mapper
+        self.logger = logger
 
     def _model_to_entity(self, model: UserModel) -> User:
         """将数据库模型转换为领域实体"""
@@ -30,18 +36,6 @@ class PostgreSQLUserRepository(UserRepository):
 
     def _entity_to_model(self, entity: User) -> UserModel:
         """将领域实体转换为数据库模型"""
-        return UserModel(
-            id=entity.id,
-            username=entity.username,
-            email=entity.email,
-            full_name=entity.full_name,
-            hashed_password=entity.hashed_password,
-            user_type=entity.user_type,
-            is_active=entity.is_active,
-            created_at=entity.created_at,
-            updated_at=entity.updated_at,
-            is_deleted=entity.is_deleted,
-        )
 
     async def get_by_id(self, user_id: str) -> User | None:
         """根据ID获取用户"""

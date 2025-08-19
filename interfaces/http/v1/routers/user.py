@@ -9,8 +9,8 @@ from application.users.commands import (
 )
 from application.users.handlers import UserService
 from domain.users.exceptions import UserNotFoundError
-from infrastructure.persistence.postgres.repositories.user_repository import (
-    PostgreSQLUserRepository,
+from infrastructure.persistence.postgres.repositories import (
+    PostgreSQLUserRepositoryImpl,
 )
 from interfaces.http.base_response import ApiResponse, PaginatedResponse
 from interfaces.http.decorators import handle_exceptions
@@ -26,7 +26,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 async def get_user_service() -> UserService:
     """获取用户服务实例"""
-    user_repository = PostgreSQLUserRepository()
+    user_repository = PostgreSQLUserRepositoryImpl()
     return UserService(user_repository)
 
 
