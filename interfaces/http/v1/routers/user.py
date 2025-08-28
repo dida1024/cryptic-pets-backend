@@ -9,9 +9,7 @@ from application.users.commands import (
 )
 from application.users.handlers import UserService
 from domain.users.exceptions import UserNotFoundError
-from infrastructure.persistence.postgres.repositories import (
-    PostgreSQLUserRepositoryImpl,
-)
+from infrastructure.dependencies import get_user_service
 from interfaces.http.base_response import ApiResponse, PaginatedResponse
 from interfaces.http.decorators import handle_exceptions
 from interfaces.http.v1.schemas.user_schemas import (
@@ -22,12 +20,6 @@ from interfaces.http.v1.schemas.user_schemas import (
 )
 
 router = APIRouter(prefix="/users", tags=["users"])
-
-
-async def get_user_service() -> UserService:
-    """获取用户服务实例"""
-    user_repository = PostgreSQLUserRepositoryImpl()
-    return UserService(user_repository)
 
 
 @router.post(
@@ -55,10 +47,7 @@ async def create_user(
     user = await user_service.create_user(command)
     user_response = UserResponse.model_validate(user.model_dump())
 
-    return ApiResponse.success(
-        data=user_response,
-        message="User created successfully"
-    )
+    return ApiResponse.success(data=user_response, message="User created successfully")
 
 
 @router.get(
@@ -104,10 +93,7 @@ async def update_user(
     user = await user_service.update_user(command)
     user_response = UserResponse.model_validate(user.model_dump())
 
-    return ApiResponse.success(
-        data=user_response,
-        message="User updated successfully"
-    )
+    return ApiResponse.success(data=user_response, message="User updated successfully")
 
 
 @router.patch(
@@ -133,8 +119,7 @@ async def update_password(
     user_response = UserResponse.model_validate(user.model_dump())
 
     return ApiResponse.success(
-        data=user_response,
-        message="Password updated successfully"
+        data=user_response, message="Password updated successfully"
     )
 
 
@@ -155,8 +140,7 @@ async def delete_user(
 
     if success:
         return ApiResponse.success(
-            data={"deleted": True},
-            message="User deleted successfully"
+            data={"deleted": True}, message="User deleted successfully"
         )
     else:
         raise UserNotFoundError
@@ -191,13 +175,8 @@ async def list_users(
     users, total = await user_service.list_users(query)
 
     # 转换为响应模型
-    user_responses = [
-        UserResponse.model_validate(user.model_dump()) for user in users
-    ]
+    user_responses = [UserResponse.model_validate(user.model_dump()) for user in users]
 
     return PaginatedResponse.create(
-        items=user_responses,
-        total=total,
-        page=page,
-        page_size=page_size
+        items=user_responses, total=total, page=page, page_size=page_size
     )

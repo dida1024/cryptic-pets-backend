@@ -138,7 +138,7 @@ class UserService:
 
     async def list_users(self, query: ListUsersQuery) -> tuple[list[User], int]:
         """获取用户列表"""
-        return await self.user_repository.list_all(
+        return await self.user_repository.list_users(
             page=query.page,
             page_size=query.page_size,
             search=query.search,

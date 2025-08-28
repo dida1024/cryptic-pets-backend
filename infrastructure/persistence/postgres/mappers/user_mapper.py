@@ -10,7 +10,7 @@ class UserMapper(BaseMapper[User, UserModel]):
     def __init__(self):
         pass
 
-    def to_domain(self, model: UserModel) -> User:
+    def to_entity(self, model: UserModel) -> User:
         """数据库模型转换为领域实体"""
         return User(
             id=model.id,
