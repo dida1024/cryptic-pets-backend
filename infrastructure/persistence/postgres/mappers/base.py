@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
+import json
 from typing import TypeVar
+
 
 DomainEntity = TypeVar('DomainEntity')
 DatabaseModel = TypeVar('DatabaseModel')

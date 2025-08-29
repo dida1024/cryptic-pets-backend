@@ -87,25 +87,3 @@ class PasswordUpdateRequest(BaseModel):
                 "new_password": "newstrongpassword123"
             }
         }
-
-
-class UserListQuery(BaseModel):
-    """用户列表查询参数"""
-    page: int = Field(default=1, ge=1, description="页码")
-    page_size: int = Field(default=10, ge=1, le=100, description="每页数量")
-    search: str | None = Field(None, description="搜索关键字（用户名或邮箱）")
-    user_type: UserTypeEnum | None = Field(None, description="用户类型过滤")
-    is_active: bool | None = Field(None, description="激活状态过滤")
-    include_deleted: bool = Field(default=False, description="是否包含已删除用户")
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "page": 1,
-                "page_size": 10,
-                "search": "john",
-                "user_type": "user",
-                "is_active": True,
-                "include_deleted": False
-            }
-        }

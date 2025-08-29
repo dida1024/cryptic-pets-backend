@@ -13,6 +13,11 @@ class UserRepository(BaseRepository[User]):
         pass
 
     @abstractmethod
+    async def get_by_id(self, id: str) -> User | None:
+        """根据ID获取用户"""
+        pass
+
+    @abstractmethod
     async def get_by_email(self, email: str) -> User | None:
         """根据邮箱获取用户"""
         pass

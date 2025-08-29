@@ -1,13 +1,14 @@
 from loguru import logger
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import String, cast
 
 from domain.pets.entities import Gene
 from domain.pets.exceptions import GeneNotFoundError, GeneRepositoryError
 from domain.pets.repository import GeneRepository
 from domain.pets.value_objects import GeneCategoryEnum, InheritanceTypeEnum
 from infrastructure.persistence.postgres.mappers.gene_mapper import GeneMapper
-from infrastructure.persistence.postgres.models.gene import Gene as GeneModel
+from infrastructure.persistence.postgres.models.gene import GeneModel
 
 
 class PostgreSQLGeneRepositoryImpl(GeneRepository):
@@ -67,7 +68,6 @@ class PostgreSQLGeneRepositoryImpl(GeneRepository):
             existing_model.inheritance_type = entity.inheritance_type
             existing_model.category = entity.category
             existing_model.updated_at = entity.updated_at
-            existing_model.version = entity.version
 
             await self.session.flush()
             await self.session.refresh(existing_model)
@@ -201,9 +201,9 @@ class PostgreSQLGeneRepositoryImpl(GeneRepository):
             # 构建搜索条件
             search_conditions = [
                 or_(
-                    GeneModel.name[language].astext.ilike(f"%{search_term}%"),
-                    GeneModel.alias[language].astext.ilike(f"%{search_term}%"),
-                    GeneModel.description[language].astext.ilike(f"%{search_term}%"),
+                    cast(GeneModel.name[language], String).ilike(f"%{search_term}%"),
+                    cast(GeneModel.alias[language], String).ilike(f"%{search_term}%"),
+                    cast(GeneModel.description[language], String).ilike(f"%{search_term}%"),
                     GeneModel.notation.ilike(f"%{search_term}%")
                 )
             ]

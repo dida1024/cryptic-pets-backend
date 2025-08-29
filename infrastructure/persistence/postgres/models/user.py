@@ -1,9 +1,14 @@
 
 
-from sqlmodel import Field
+from typing import TYPE_CHECKING
+
+from sqlmodel import Field, Relationship
 
 from domain.users.value_objects import UserTypeEnum
 from infrastructure.persistence.postgres.models.base import BaseModel
+
+if TYPE_CHECKING:
+    from infrastructure.persistence.postgres.models.pet import PetModel
 
 
 class UserModel(BaseModel, table=True):
@@ -15,3 +20,7 @@ class UserModel(BaseModel, table=True):
     hashed_password: str = Field(nullable=False)
     user_type: UserTypeEnum = Field(default=UserTypeEnum.USER, nullable=False)
     is_active: bool = Field(default=True, nullable=False)
+
+    # Relationships
+    pets: list["PetModel"] = Relationship(back_populates="owner")
+

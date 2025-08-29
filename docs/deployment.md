@@ -85,7 +85,7 @@ docker-compose logs -f app
 curl http://localhost:8000/docs
 
 # 检查数据库连接
-docker-compose exec app python -c "from infrastructure.persistence.postgres.init_db import init_db; init_db()"
+docker-compose execute app python -c "from infrastructure.persistence.postgres.init_db import init_db; init_db()"
 ```
 
 ### 2. 传统部署
@@ -196,7 +196,7 @@ Description=Cryptic Pets Backend
 After=network.target postgresql.service redis.service
 
 [Service]
-Type=exec
+Type=execute
 User=www-data
 Group=www-data
 WorkingDirectory=/opt/cryptic-pets-backend
@@ -528,10 +528,10 @@ async def health_check():
 
 ```bash
 # 创建备份
-docker-compose exec postgres pg_dump -U cryptic_user cryptic_pets > backup_$(date +%Y%m%d_%H%M%S).sql
+docker-compose execute postgres pg_dump -U cryptic_user cryptic_pets > backup_$(date +%Y%m%d_%H%M%S).sql
 
 # 恢复备份
-docker-compose exec -T postgres psql -U cryptic_user cryptic_pets < backup_20240101_120000.sql
+docker-compose execute -T postgres psql -U cryptic_user cryptic_pets < backup_20240101_120000.sql
 ```
 
 ### 2. 定期备份脚本
@@ -548,7 +548,7 @@ BACKUP_FILE="$BACKUP_DIR/cryptic_pets_$DATE.sql"
 mkdir -p $BACKUP_DIR
 
 # 执行备份
-docker-compose exec -T postgres pg_dump -U cryptic_user cryptic_pets > $BACKUP_FILE
+docker-compose execute -T postgres pg_dump -U cryptic_user cryptic_pets > $BACKUP_FILE
 
 # 压缩备份文件
 gzip $BACKUP_FILE
@@ -623,16 +623,16 @@ docker-compose logs app
 netstat -tlnp | grep 8000
 
 # 检查环境变量
-docker-compose exec app env | grep POSTGRES
+docker-compose execute app env | grep POSTGRES
 ```
 
 **数据库连接失败**
 ```bash
 # 检查数据库状态
-docker-compose exec postgres pg_isready -U cryptic_user
+docker-compose execute postgres pg_isready -U cryptic_user
 
 # 检查连接配置
-docker-compose exec app python -c "from infrastructure.config import settings; print(settings.SQLALCHEMY_DATABASE_URI)"
+docker-compose execute app python -c "from infrastructure.config import settings; print(settings.SQLALCHEMY_DATABASE_URI)"
 ```
 
 **性能问题**
@@ -641,7 +641,7 @@ docker-compose exec app python -c "from infrastructure.config import settings; p
 docker stats
 
 # 检查数据库连接数
-docker-compose exec postgres psql -U cryptic_user -d cryptic_pets -c "SELECT count(*) FROM pg_stat_activity;"
+docker-compose execute postgres psql -U cryptic_user -d cryptic_pets -c "SELECT count(*) FROM pg_stat_activity;"
 ```
 
 ### 2. 维护命令

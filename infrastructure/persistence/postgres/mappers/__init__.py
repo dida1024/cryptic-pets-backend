@@ -6,6 +6,7 @@ from .gene_mapper import GeneMapper
 from .morph_gene_mapping_mapper import MorphGeneMappingMapper
 from .morphology_mapper import MorphologyMapper
 from .pet_mapper import PetMapper
+from .user_mapper import UserMapper
 
 __all__ = [
     "BaseMapper",
@@ -13,5 +14,6 @@ __all__ = [
     "GeneMapper",
     "MorphGeneMappingMapper",
     "MorphologyMapper",
-    "PetMapper"
+    "PetMapper",
+    "UserMapper",
 ]

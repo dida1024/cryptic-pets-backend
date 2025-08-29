@@ -3,17 +3,16 @@ from loguru import logger
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlmodel import String, cast
 
 from domain.pets.entities import Pet
 from domain.pets.exceptions import PetNotFoundError, PetRepositoryError
 from domain.pets.repository import PetRepository
 from infrastructure.persistence.postgres.mappers import PetMapper
 from infrastructure.persistence.postgres.models.morph_gene_mapping import (
-    MorphGeneMapping as MorphGeneMappingModel,
+    MorphGeneMappingModel,
 )
-from infrastructure.persistence.postgres.models.morphology import (
-    Morphology as MorphologyModel,
-)
+from infrastructure.persistence.postgres.models.morphology import MorphologyModel
 from infrastructure.persistence.postgres.models.pet import PetModel
 
 
@@ -36,7 +35,7 @@ class PostgreSQLPetRepositoryImpl(PetRepository):
                     selectinload(PetModel.extra_gene_list).selectinload(MorphGeneMappingModel.gene)
                 )
                 .where(PetModel.id == entity_id)
-                .where(not PetModel.is_deleted)
+                .where(PetModel.is_deleted.is_(False))
             )
             result = await self.session.execute(stmt)
             model = result.scalar_one_or_none()
@@ -56,7 +55,7 @@ class PostgreSQLPetRepositoryImpl(PetRepository):
             model = self.mapper.to_model(entity)
             self.session.add(model)
             await self.session.flush()
-            await self.session.refresh(model)
+            await self.session.refresh(model, attribute_names=['breed', 'morphology', 'extra_gene_list', 'owner'])
 
             return self.mapper.to_domain(model)
 
@@ -73,13 +72,13 @@ class PostgreSQLPetRepositoryImpl(PetRepository):
 
             # 更新字段
             existing_model.name = entity.name
+            existing_model.description = entity.description
             existing_model.birth_date = entity.birth_date
             existing_model.owner_id = entity.owner.id
             existing_model.breed_id = entity.breed.id if entity.breed else None
             existing_model.gender = entity.gender
             existing_model.morphology_id = entity.morphology.id if entity.morphology else None
             existing_model.updated_at = entity.updated_at
-            existing_model.version = entity.version
 
             await self.session.flush()
             await self.session.refresh(existing_model)
@@ -112,6 +111,8 @@ class PostgreSQLPetRepositoryImpl(PetRepository):
         self,
         page: int = 1,
         page_size: int = 10,
+        search: str = None,
+        owner_id: str = None,
         include_deleted: bool = False
     ) -> tuple[list[Pet], int]:
         """获取宠物列表"""
@@ -123,12 +124,15 @@ class PostgreSQLPetRepositoryImpl(PetRepository):
                     selectinload(PetModel.morphology),
                     selectinload(PetModel.extra_gene_list)
                 )
+                .where(cast(PetModel.name["en"], String).ilike(f"%{search}%"))
+                .where(PetModel.owner_id == owner_id)
+                .order_by(PetModel.created_at.desc())
             )
             count_stmt = select(func.count(PetModel.id))
 
             if not include_deleted:
-                stmt = stmt.where(not PetModel.is_deleted)
-                count_stmt = count_stmt.where(not PetModel.is_deleted)
+                stmt = stmt.where(PetModel.is_deleted.is_(False))
+                count_stmt = count_stmt.where(PetModel.is_deleted.is_(False))
 
             # 获取总数
             count_result = await self.session.execute(count_stmt)
@@ -160,7 +164,7 @@ class PostgreSQLPetRepositoryImpl(PetRepository):
                     selectinload(PetModel.extra_gene_list)
                 )
                 .where(PetModel.owner_id == owner_id)
-                .where(not PetModel.is_deleted)
+                .where(PetModel.is_deleted.is_(False))
                 .order_by(PetModel.created_at.desc())
             )
 
@@ -184,7 +188,7 @@ class PostgreSQLPetRepositoryImpl(PetRepository):
                     selectinload(PetModel.extra_gene_list)
                 )
                 .where(PetModel.breed_id == breed_id)
-                .where(not PetModel.is_deleted)
+                .where(PetModel.is_deleted.is_(False))
                 .order_by(PetModel.created_at.desc())
             )
 
@@ -208,7 +212,7 @@ class PostgreSQLPetRepositoryImpl(PetRepository):
                     selectinload(PetModel.extra_gene_list)
                 )
                 .where(PetModel.morphology_id == morphology_id)
-                .where(not PetModel.is_deleted)
+                .where(PetModel.is_deleted.is_(False))
                 .order_by(PetModel.created_at.desc())
             )
 
@@ -231,8 +235,8 @@ class PostgreSQLPetRepositoryImpl(PetRepository):
                     selectinload(PetModel.morphology),
                     selectinload(PetModel.extra_gene_list)
                 )
-                .where(PetModel.name[language].astext == name)
-                .where(not PetModel.is_deleted)
+                .where(cast(PetModel.name[language], String) == name)
+                .where(PetModel.is_deleted.is_(False))
             )
             result = await self.session.execute(stmt)
             model = result.scalar_one_or_none()
@@ -261,8 +265,8 @@ class PostgreSQLPetRepositoryImpl(PetRepository):
             # 构建搜索条件
             search_conditions = [
                 or_(
-                    PetModel.name["en"].astext.ilike(f"%{search_term}%"),
-                    PetModel.name["zh"].astext.ilike(f"%{search_term}%")
+                    cast(PetModel.name["en"], String).ilike(f"%{search_term}%"),
+                    cast(PetModel.name["zh"], String).ilike(f"%{search_term}%")
                 )
             ]
 
@@ -277,7 +281,7 @@ class PostgreSQLPetRepositoryImpl(PetRepository):
                 search_conditions.append(PetModel.morphology_id == morphology_id)
 
             if not include_deleted:
-                search_conditions.append(not PetModel.is_deleted)
+                search_conditions.append(PetModel.is_deleted.is_(False))
 
             # 组合所有条件
             where_clause = and_(*search_conditions)
@@ -311,3 +315,19 @@ class PostgreSQLPetRepositoryImpl(PetRepository):
         except Exception as e:
             self.logger.error(f"Failed to search pets with term {search_term}: {e}")
             raise PetRepositoryError(f"Failed to search pets: {e}", "search_pets")
+
+    async def exists_by_name(self, name: str, exclude_id: str | None = None) -> bool:
+        """检查指定名称的宠物是否存在（可选排除ID）"""
+        try:
+            stmt = select(func.count(PetModel.id)).where(
+                PetModel.name == name,
+                PetModel.is_deleted.is_(False),
+            )
+            if exclude_id:
+                stmt = stmt.where(PetModel.id != exclude_id)
+            result = await self.session.execute(stmt)
+            count = result.scalar() or 0
+            return count > 0
+        except Exception as e:
+            self.logger.error(f"Failed to check pet exists by name {name}: {e}")
+            raise PetRepositoryError(f"Failed to check exists_by_name: {e}", "exists_by_name")

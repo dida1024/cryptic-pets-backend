@@ -24,7 +24,6 @@ class MorphGeneMappingMapper(BaseMapper[MorphGeneMapping, MorphGeneMappingModel]
             created_at=model.created_at,
             updated_at=model.updated_at,
             is_deleted=model.is_deleted,
-            version=model.version
         )
 
     def to_model(self, entity: MorphGeneMapping) -> MorphGeneMappingModel:
@@ -37,5 +36,4 @@ class MorphGeneMappingMapper(BaseMapper[MorphGeneMapping, MorphGeneMappingModel]
             created_at=entity.created_at,
             updated_at=entity.updated_at,
             is_deleted=entity.is_deleted,
-            version=entity.version
         )

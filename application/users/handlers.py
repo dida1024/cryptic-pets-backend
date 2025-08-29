@@ -136,9 +136,9 @@ class UserService:
         # 执行软删除
         return await self.user_repository.delete(command.user_id)
 
-    async def list_users(self, query: ListUsersQuery) -> tuple[list[User], int]:
+    async def list_all(self, query: ListUsersQuery) -> tuple[list[User], int]:
         """获取用户列表"""
-        return await self.user_repository.list_users(
+        return await self.user_repository.list_all(
             page=query.page,
             page_size=query.page_size,
             search=query.search,

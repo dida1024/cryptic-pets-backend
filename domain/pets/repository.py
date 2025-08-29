@@ -29,6 +29,11 @@ class PetRepository(BaseRepository[Pet]):
         pass
 
     @abstractmethod
+    async def exists_by_name(self, name: str, exclude_id: str | None = None) -> bool:
+        """检查指定名称的宠物是否存在（可选排除ID）"""
+        pass
+
+    @abstractmethod
     async def search_pets(
         self,
         search_term: str,

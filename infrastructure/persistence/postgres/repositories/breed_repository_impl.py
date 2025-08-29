@@ -1,6 +1,7 @@
 from loguru import logger
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import String, cast
 
 from domain.pets.entities import Breed
 from domain.pets.exceptions import BreedNotFoundError, BreedRepositoryError
@@ -23,7 +24,7 @@ class PostgreSQLBreedRepositoryImpl(BreedRepository):
             stmt = (
                 select(BreedModel)
                 .where(BreedModel.id == entity_id)
-                .where(not BreedModel.is_deleted)
+                .where(BreedModel.is_deleted.is_(False))
             )
             result = await self.session.execute(stmt)
             model = result.scalar_one_or_none()
@@ -44,9 +45,7 @@ class PostgreSQLBreedRepositoryImpl(BreedRepository):
             self.session.add(model)
             await self.session.flush()
             await self.session.refresh(model)
-
             return self.mapper.to_domain(model)
-
         except Exception as e:
             self.logger.error(f"Failed to create breed {entity.id}: {e}")
             raise BreedRepositoryError(f"Failed to create breed: {e}", "create")
@@ -60,10 +59,11 @@ class PostgreSQLBreedRepositoryImpl(BreedRepository):
                 raise BreedNotFoundError(entity.id)
 
             # 更新字段
-            existing_model.name = entity.name
-            existing_model.description = entity.description
+            existing_model.name = entity.name.model_dump()
+            existing_model.description = (
+                entity.description.model_dump() if entity.description else None
+            )
             existing_model.updated_at = entity.updated_at
-            existing_model.version = entity.version
 
             await self.session.flush()
             await self.session.refresh(existing_model)
@@ -105,8 +105,8 @@ class PostgreSQLBreedRepositoryImpl(BreedRepository):
             count_stmt = select(func.count(BreedModel.id))
 
             if not include_deleted:
-                stmt = stmt.where(not BreedModel.is_deleted)
-                count_stmt = count_stmt.where(not BreedModel.is_deleted)
+                stmt = stmt.where(BreedModel.is_deleted.is_(False))
+                count_stmt = count_stmt.where(BreedModel.is_deleted.is_(False))
 
             # 获取总数
             count_result = await self.session.execute(count_stmt)
@@ -133,8 +133,8 @@ class PostgreSQLBreedRepositoryImpl(BreedRepository):
             # 使用JSON查询搜索国际化名称
             stmt = (
                 select(BreedModel)
-                .where(BreedModel.name[language].astext == name)
-                .where(not BreedModel.is_deleted)
+                .where(cast(BreedModel.name[language], String) == name)
+                .where(BreedModel.is_deleted.is_(False))
             )
             result = await self.session.execute(stmt)
             model = result.scalar_one_or_none()
@@ -160,16 +160,16 @@ class PostgreSQLBreedRepositoryImpl(BreedRepository):
         try:
             # 构建搜索查询
             search_condition = or_(
-                BreedModel.name[language].astext.ilike(f"%{search_term}%"),
-                BreedModel.description[language].astext.ilike(f"%{search_term}%")
+                cast(BreedModel.name[language], String).ilike(f"%{search_term}%"),
+                cast(BreedModel.description[language], String).ilike(f"%{search_term}%")
             )
 
             stmt = select(BreedModel).where(search_condition)
             count_stmt = select(func.count(BreedModel.id)).where(search_condition)
 
             if not include_deleted:
-                stmt = stmt.where(not BreedModel.is_deleted)
-                count_stmt = count_stmt.where(not BreedModel.is_deleted)
+                stmt = stmt.where(BreedModel.is_deleted.is_(False))
+                count_stmt = count_stmt.where(BreedModel.is_deleted.is_(False))
 
             # 获取总数
             count_result = await self.session.execute(count_stmt)

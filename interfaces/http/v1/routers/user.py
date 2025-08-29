@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, Query, status
 
+from application.pets.commands import CreatePetCommand, ListPetsQuery
+from application.pets.handlers import PetService
 from application.users.commands import (
     CreateUserCommand,
     DeleteUserCommand,
@@ -9,9 +11,10 @@ from application.users.commands import (
 )
 from application.users.handlers import UserService
 from domain.users.exceptions import UserNotFoundError
-from infrastructure.dependencies import get_user_service
+from infrastructure.dependencies import get_pet_service, get_user_service
 from interfaces.http.base_response import ApiResponse, PaginatedResponse
 from interfaces.http.decorators import handle_exceptions
+from interfaces.http.v1.schemas.pet_schemas import CreatePetRequest, PetResponse
 from interfaces.http.v1.schemas.user_schemas import (
     CreateUserRequest,
     PasswordUpdateRequest,
@@ -153,7 +156,7 @@ async def delete_user(
     description="获取用户列表，支持搜索和过滤",
 )
 @handle_exceptions
-async def list_users(
+async def list_all(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
     search: str = Query(None, description="搜索关键字（用户名或邮箱）"),
@@ -172,11 +175,62 @@ async def list_users(
         include_deleted=include_deleted,
     )
 
-    users, total = await user_service.list_users(query)
+    users, total = await user_service.list_all(query)
 
     # 转换为响应模型
     user_responses = [UserResponse.model_validate(user.model_dump()) for user in users]
 
     return PaginatedResponse.create(
         items=user_responses, total=total, page=page, page_size=page_size
+    )
+
+# about pet ->
+@router.post(
+    "/{user_id}/pets",
+    response_model=ApiResponse[PetResponse],
+    status_code=status.HTTP_201_CREATED,
+    summary="为用户创建宠物",
+    description="为指定用户创建新的宠物记录",
+)
+@handle_exceptions
+async def create_user_pet(
+    user_id: str,
+    request: CreatePetRequest,
+    pet_service: PetService = Depends(get_pet_service),
+) -> ApiResponse[PetResponse]:
+    """为用户创建宠物"""
+    command = CreatePetCommand(
+        name=request.name,
+        owner_id=user_id,
+        breed_id=request.breed_id,
+        birth_date=request.birth_date,
+        gender=request.gender,
+        description=request.description,
+    )
+
+    pet = await pet_service.create_pet(command)
+    pet_response = PetResponse.model_validate(pet.model_dump())
+
+    return ApiResponse.success(data=pet_response, message="Pet created successfully")
+
+
+@router.get("/{user_id}/pets", response_model=PaginatedResponse[PetResponse])
+async def get_user_pets(
+    user_id: str,
+    page: int = Query(1, ge=1, description="页码"),
+    page_size: int = Query(10, ge=1, le=100, description="每页数量"),
+    search: str = Query(None, description="搜索关键字（宠物名）"),
+    pet_service: PetService = Depends(get_pet_service)
+) -> PaginatedResponse[PetResponse]:
+    """获取用户宠物列表"""
+    query = ListPetsQuery(
+        owner_id=user_id, page=page, page_size=page_size, search=search
+    )
+    pets,total = await pet_service.list_all(query)
+    pet_responses = [PetResponse.model_validate(pet.model_dump()) for pet in pets]
+    return PaginatedResponse.create(
+        items=pet_responses,
+        total=total,
+        page=page,
+        page_size=page_size,
     )

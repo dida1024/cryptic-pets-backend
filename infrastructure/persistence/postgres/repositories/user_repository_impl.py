@@ -24,9 +24,9 @@ class PostgreSQLUserRepositoryImpl(UserRepository):
             UserModel.id == user_id,
             UserModel.is_deleted.is_(False),
         )
-        result = await self.session.exec(statement)
-        model = result.first()
-        return self.mapper.to_entity(model) if model else None
+        result = await self.session.execute(statement)
+        model = result.scalar_one_or_none()
+        return self.mapper.to_domain(model) if model else None
 
     async def get_by_username(self, username: str) -> User | None:
         """根据用户名获取用户"""
@@ -34,9 +34,9 @@ class PostgreSQLUserRepositoryImpl(UserRepository):
             UserModel.username == username,
             UserModel.is_deleted.is_(False),
         )
-        result = await self.session.exec(statement)
-        model = result.first()
-        return self.mapper.to_entity(model) if model else None
+        result = await self.session.execute(statement)
+        model = result.scalar_one_or_none()
+        return self.mapper.to_domain(model) if model else None
 
     async def get_by_email(self, email: str) -> User | None:
         """根据邮箱获取用户"""
@@ -44,23 +44,23 @@ class PostgreSQLUserRepositoryImpl(UserRepository):
             UserModel.email == email,
             UserModel.is_deleted.is_(False),
         )
-        result = await self.session.exec(statement)
-        model = result.first()
-        return self.mapper.to_entity(model) if model else None
+        result = await self.session.execute(statement)
+        model = result.scalar_one_or_none()
+        return self.mapper.to_domain(model) if model else None
 
     async def create(self, user: User) -> User:
         """创建用户"""
         model = self.mapper.to_model(user)
         self.session.add(model)
-        await self.session.commit()
+        await self.session.flush()
         await self.session.refresh(model)
-        return self.mapper.to_entity(model)
+        return self.mapper.to_domain(model)
 
     async def update(self, user: User) -> User:
         """更新用户"""
         statement = select(UserModel).where(UserModel.id == user.id)
-        result = await self.session.exec(statement)
-        existing_model = result.first()
+        result = await self.session.execute(statement)
+        existing_model = result.scalar_one_or_none()
         if not existing_model:
             raise ValueError(f"User with id {user.id} not found")
 
@@ -75,9 +75,9 @@ class PostgreSQLUserRepositoryImpl(UserRepository):
         existing_model.is_deleted = user.is_deleted
 
         self.session.add(existing_model)
-        await self.session.commit()
+        await self.session.flush()
         await self.session.refresh(existing_model)
-        return self.mapper.to_entity(existing_model)
+        return self.mapper.to_domain(existing_model)
 
     async def delete(self, user_id: str) -> bool:
         """删除用户（软删除）"""
@@ -85,17 +85,17 @@ class PostgreSQLUserRepositoryImpl(UserRepository):
             UserModel.id == user_id,
             UserModel.is_deleted.is_(False),
         )
-        result = await self.session.exec(statement)
-        model = result.first()
+        result = await self.session.execute(statement)
+        model = result.scalar_one_or_none()
         if not model:
             return False
 
         model.is_deleted = True
         self.session.add(model)
-        await self.session.commit()
+        await self.session.flush()
         return True
 
-    async def list_users(
+    async def list_all(
         self,
         page: int = 1,
         page_size: int = 10,
@@ -126,16 +126,16 @@ class PostgreSQLUserRepositoryImpl(UserRepository):
             statement = statement.where(UserModel.is_active == is_active)
 
         count_statement = select(func.count()).select_from(statement.subquery())
-        count_result = await self.session.exec(count_statement)
-        total = count_result.one()
+        count_result = await self.session.execute(count_statement)
+        total = count_result.scalar_one()
 
         offset = (page - 1) * page_size
         statement = statement.offset(offset).limit(page_size)
         statement = statement.order_by(UserModel.created_at.desc())
 
-        result = await self.session.exec(statement)
-        models = result.all()
-        users = [self.mapper.to_entity(model) for model in models]
+        result = await self.session.execute(statement)
+        models = result.scalars().all()
+        users = [self.mapper.to_domain(model) for model in models]
 
         return users, total
 
@@ -150,8 +150,8 @@ class PostgreSQLUserRepositoryImpl(UserRepository):
         if exclude_id:
             statement = statement.where(UserModel.id != exclude_id)
 
-        result = await self.session.exec(statement)
-        model = result.first()
+        result = await self.session.execute(statement)
+        model = result.scalar_one_or_none()
         return model is not None
 
     async def exists_by_email(self, email: str, exclude_id: str | None = None) -> bool:
@@ -163,6 +163,6 @@ class PostgreSQLUserRepositoryImpl(UserRepository):
         if exclude_id:
             statement = statement.where(UserModel.id != exclude_id)
 
-        result = await self.session.exec(statement)
-        model = result.first()
+        result = await self.session.execute(statement)
+        model = result.scalar_one_or_none()
         return model is not None

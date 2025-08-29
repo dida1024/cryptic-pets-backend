@@ -1,8 +1,8 @@
+from .pet_schemas import PetResponse
 from .user_schemas import (
     CreateUserRequest,
     PasswordUpdateRequest,
     UpdateUserRequest,
-    UserListQuery,
     UserResponse,
 )
 
@@ -11,5 +11,5 @@ __all__ = [
     "UpdateUserRequest",
     "UserResponse",
     "PasswordUpdateRequest",
-    "UserListQuery",
+    "PetResponse"
 ]

@@ -593,7 +593,7 @@ class UserRepository(ABC):
         pass
     
     @abstractmethod
-    async def list_users(self, limit: int, offset: int) -> list[User]:
+    async def list_all(self, limit: int, offset: int) -> list[User]:
         pass
 ```
 

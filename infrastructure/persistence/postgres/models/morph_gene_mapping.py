@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from __future__ import annotations
 
 from sqlalchemy import (
     Boolean,
@@ -14,10 +14,8 @@ from sqlmodel import Field, Relationship
 from domain.pets.value_objects import ZygosityEnum
 from infrastructure.persistence.postgres.models.base import BaseModel
 from infrastructure.persistence.postgres.models.gene import GeneModel
-
-if TYPE_CHECKING:
-    from infrastructure.persistence.postgres.models.morphology import MorphologyModel
-    from infrastructure.persistence.postgres.models.pet import PetModel
+from infrastructure.persistence.postgres.models.morphology import MorphologyModel
+from infrastructure.persistence.postgres.models.pet import PetModel
 
 
 class MorphGeneMappingModel(BaseModel, table=True):
@@ -73,6 +71,5 @@ class MorphGeneMappingModel(BaseModel, table=True):
     )
 
     gene: GeneModel = Relationship()
-    # 使用字符串引用避免循环导入
-    morphology: "MorphologyModel" | None = Relationship()
-    pet: "PetModel" | None = Relationship(back_populates="extra_gene_list")
+    morphology: MorphologyModel = Relationship(back_populates="gene_mappings")
+    pet: PetModel = Relationship(back_populates="extra_gene_list")

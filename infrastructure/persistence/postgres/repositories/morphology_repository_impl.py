@@ -2,13 +2,14 @@ from loguru import logger
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlmodel import String, cast
 
 from domain.pets.entities import Morphology
 from domain.pets.exceptions import MorphologyNotFoundError, MorphologyRepositoryError
 from domain.pets.repository import MorphologyRepository
 from infrastructure.persistence.postgres.mappers import MorphologyMapper
 from infrastructure.persistence.postgres.models.morph_gene_mapping import (
-    MorphGeneMapping as MorphGeneMappingModel,
+    MorphGeneMappingModel,
 )
 from infrastructure.persistence.postgres.models.morphology import MorphologyModel
 
@@ -75,7 +76,6 @@ class PostgreSQLMorphologyRepositoryImpl(MorphologyRepository):
             existing_model.name = entity.name
             existing_model.description = entity.description
             existing_model.updated_at = entity.updated_at
-            existing_model.version = entity.version
 
             await self.session.flush()
             await self.session.refresh(existing_model)
@@ -273,8 +273,8 @@ class PostgreSQLMorphologyRepositoryImpl(MorphologyRepository):
             # 搜索条件
             search_conditions = [
                 or_(
-                    MorphologyModel.name[language].astext.ilike(f"%{search_term}%"),
-                    MorphologyModel.description[language].astext.ilike(
+                    cast(MorphologyModel.name[language], String).ilike(f"%{search_term}%"),
+                    cast(MorphologyModel.description[language], String).ilike(
                         f"%{search_term}%"
                     ),
                 )
