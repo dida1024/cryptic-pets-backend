@@ -1,5 +1,5 @@
 from loguru import logger
-from sqlalchemy import func, or_
+from sqlalchemy import ColumnElement, UnaryExpression, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -105,39 +105,46 @@ class PostgreSQLUserRepositoryImpl(UserRepository):
         include_deleted: bool = False,
     ) -> tuple[list[User], int]:
         """获取用户列表"""
-        statement = select(UserModel)
+        statement = select(
+            UserModel,
+            func.count(UserModel.id).over().label("total_count")
+        )
 
-        if not include_deleted:
-            statement = statement.where(UserModel.is_deleted.is_(False))
+        conditions = self._generate_query_conditions(search, user_type, is_active, include_deleted)
+        if conditions:
+            statement = statement.where(*conditions)
 
-        if search:
-            statement = statement.where(
-                or_(
-                    UserModel.username.ilike(f"%{search}%"),
-                    UserModel.email.ilike(f"%{search}%"),
-                    UserModel.full_name.ilike(f"%{search}%"),
-                )
-            )
-        if user_type:
-            statement = statement.where(
-                UserModel.user_type == UserTypeEnum(user_type)
-            )
-        if is_active is not None:
-            statement = statement.where(UserModel.is_active == is_active)
-
-        count_statement = select(func.count()).select_from(statement.subquery())
-        count_result = await self.session.execute(count_statement)
-        total = count_result.scalar_one()
-
-        offset = (page - 1) * page_size
-        statement = statement.offset(offset).limit(page_size)
-        statement = statement.order_by(UserModel.created_at.desc())
+        statement = statement.offset((page - 1) * page_size).limit(page_size).order_by(UserModel.created_at.desc())
 
         result = await self.session.execute(statement)
-        models = result.scalars().all()
-        users = [self.mapper.to_domain(model) for model in models]
+        rows = result.all()
 
-        return users, total
+        if not rows:
+            return [], 0
+        total_count = rows[0].total_count
+        models = [row.UserModel for row in rows]
+        users = self.mapper.to_domain_list(models)
+
+        return users, total_count
+
+    def _generate_query_conditions(
+        self,
+        search: str = None,
+        user_type: str = None,
+        is_active: bool = None,
+        include_deleted: bool = False,
+    ) -> list[UnaryExpression | ColumnElement]:
+        """生成查询条件"""
+        conditions = []
+        if search:
+            conditions.append(UserModel.username.ilike(f"%{search}%"))
+        if user_type:
+            conditions.append(UserModel.user_type == UserTypeEnum(user_type))
+        if is_active is not None:
+            conditions.append(UserModel.is_active == is_active)
+        if not include_deleted:
+            conditions.append(UserModel.is_deleted.is_(False))
+        return conditions
 
     async def exists_by_username(
         self, username: str, exclude_id: str | None = None

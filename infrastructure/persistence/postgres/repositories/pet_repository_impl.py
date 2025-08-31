@@ -1,6 +1,6 @@
 
 from loguru import logger
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import ColumnElement, UnaryExpression, and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlmodel import String, cast
@@ -118,40 +118,52 @@ class PostgreSQLPetRepositoryImpl(PetRepository):
         """获取宠物列表"""
         try:
             stmt = (
-                select(PetModel)
+                select(
+                    PetModel,
+                    func.count(PetModel.id).over().label("total_count")
+                )
                 .options(
                     selectinload(PetModel.breed),
                     selectinload(PetModel.morphology),
-                    selectinload(PetModel.extra_gene_list)
+                    selectinload(PetModel.extra_gene_list),
+                    selectinload(PetModel.owner)
                 )
-                .where(cast(PetModel.name["en"], String).ilike(f"%{search}%"))
-                .where(PetModel.owner_id == owner_id)
-                .order_by(PetModel.created_at.desc())
             )
-            count_stmt = select(func.count(PetModel.id))
+            conditions = self._generate_query_conditions(search, owner_id, include_deleted)
+            if conditions:
+                stmt = stmt.where(*conditions)
 
-            if not include_deleted:
-                stmt = stmt.where(PetModel.is_deleted.is_(False))
-                count_stmt = count_stmt.where(PetModel.is_deleted.is_(False))
-
-            # 获取总数
-            count_result = await self.session.execute(count_stmt)
-            total_count = count_result.scalar()
-
-            # 分页查询
-            offset = (page - 1) * page_size
-            stmt = stmt.offset(offset).limit(page_size).order_by(PetModel.created_at.desc())
+            stmt = stmt.offset((page - 1) * page_size).limit(page_size).order_by(PetModel.created_at.desc())
 
             result = await self.session.execute(stmt)
-            models = result.scalars().all()
+            rows = result.all()
 
-            pets = self.mapper.to_domain_list(list(models))
-
+            if not rows:
+                return [], 0
+            total_count = rows[0].total_count
+            models = [row.PetModel for row in rows]
+            pets = self.mapper.to_domain_list(models)
             return pets, total_count
 
         except Exception as e:
             self.logger.error(f"Failed to list pets: {e}")
             raise PetRepositoryError(f"Failed to list pets: {e}", "list_all")
+
+    def _generate_query_conditions(
+        self,
+        search: str = None,
+        owner_id: str = None,
+        include_deleted: bool = False
+    ) -> list[UnaryExpression | ColumnElement]:
+        """生成查询条件"""
+        conditions = []
+        if search:
+            conditions.append(PetModel.name.ilike(f"%{search}%"))
+        if owner_id:
+            conditions.append(PetModel.owner_id == owner_id)
+        if not include_deleted:
+            conditions.append(PetModel.is_deleted.is_(False))
+        return conditions
 
     async def get_by_owner_id(self, owner_id: str) -> list[Pet]:
         """根据主人ID获取宠物列表"""
