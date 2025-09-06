@@ -1,0 +1,490 @@
+# Cryptic Pets Backend - Cursor AI Rules
+
+## Project Context & Architecture
+
+This is a Python FastAPI backend project using Domain-Driven Design (DDD) with a clean 4-layer architecture:
+
+- **Domain Layer**: Pure business logic, entities, value objects, repository interfaces
+- **Application Layer**: Use cases, command/query handlers, application services  
+- **Infrastructure Layer**: Database implementations, external services, technical concerns
+- **Interface Layer**: HTTP API endpoints, request/response models, exception handling
+
+### Technology Stack
+- **Framework**: FastAPI 0.111.0+ with async/await
+- **ORM**: SQLModel 0.0.21+ with SQLAlchemy async
+- **Database**: PostgreSQL with AsyncPG driver
+- **Validation**: Pydantic 2.8.2+ with Field descriptions
+- **Authentication**: JWT with bcrypt password hashing
+- **Logging**: Loguru for structured logging
+- **Code Quality**: Ruff (linting), MyPy (type checking)
+
+## Architectural Constraints
+
+### Layer Dependencies (CRITICAL - NEVER VIOLATE)
+```
+Interfaces → Application → Domain ← Infrastructure
+```
+
+1. **Domain Layer**: NEVER import from application, infrastructure, or interfaces layers
+2. **Application Layer**: ONLY import from domain layer
+3. **Infrastructure Layer**: ONLY import from domain layer (implements interfaces)
+4. **Interface Layer**: Import from application and infrastructure layers for coordination
+
+### DDD Patterns
+- Entities inherit from `BaseEntity` with id, timestamps, soft delete
+- Value objects are immutable Pydantic models or Enums
+- Repositories define interfaces in domain, implementations in infrastructure
+- Use aggregate boundaries - avoid direct entity-to-entity references across aggregates
+
+## Coding Standards
+
+### Ruff Code Quality (MANDATORY - MUST PASS ALL CHECKS)
+ALL generated code MUST pass Ruff linting without any errors or warnings. The project uses:
+
+**Enabled Rules**:
+- `E` - pycodestyle errors (code style violations)
+- `W` - pycodestyle warnings (style warnings)
+- `F` - pyflakes (unused imports, undefined variables)
+- `I` - isort (import sorting and organization)
+- `B` - flake8-bugbear (common bugs and design problems)
+- `C4` - flake8-comprehensions (list/dict comprehension improvements)
+- `UP` - pyupgrade (modern Python syntax upgrades)
+- `ARG001` - unused function arguments
+
+**Key Requirements**:
+- Import sorting: Standard library → Third-party → Local imports (with blank lines)
+- No unused imports or variables
+- Use modern Python 3.12+ syntax (e.g., `str | None` instead of `Union[str, None]`)
+- Proper list/dict comprehensions where applicable
+- No unused function arguments (use `_` prefix if needed)
+
+**Before submitting any code, ensure it passes**: `ruff check .`
+
+### Naming Conventions
+- **Classes**: PascalCase (`User`, `UserService`, `PostgreSQLUserRepositoryImpl`)
+- **Functions/Variables**: snake_case (`create_user`, `user_repository`, `hashed_password`)
+- **Constants**: UPPER_CASE (`ACCESS_TOKEN_EXPIRE_MINUTES`, `API_V1_STR`)
+- **Files/Directories**: snake_case (`user_mapper.py`, `postgres/repositories/`)
+- **Repository Implementations**: `PostgreSQL{Entity}RepositoryImpl`
+- **Mappers**: `{Entity}Mapper`
+
+### Type Annotations (MANDATORY)
+```python
+# ✅ Always include return types
+async def create_user(self, command: CreateUserCommand) -> User:
+    pass
+
+# ✅ Use modern union syntax
+user_id: str | None = None
+users: list[User] = []
+meta: dict[str, Any] | None = None
+
+# ✅ Generic type parameters
+class ApiResponse[T](BaseModel):
+    data: T | None = None
+```
+
+### Import Organization (Ruff `I` Rules)
+CRITICAL: Follow exact import sorting to pass Ruff checks:
+
+```python
+# 1. Standard library imports (alphabetical)
+from datetime import datetime
+from typing import Any
+from uuid import uuid4
+
+# 2. Third-party library imports (alphabetical)
+from fastapi import APIRouter, Depends, status
+from loguru import logger
+from pydantic import BaseModel, Field
+from sqlmodel import select
+
+# 3. Local imports (grouped by layer, alphabetical within groups)
+from domain.users.entities import User
+from domain.users.repository import UserRepository
+
+from application.users.commands import CreateUserCommand
+from application.users.handlers import UserService
+
+from infrastructure.dependencies import get_user_service
+
+from interfaces.http.base_response import ApiResponse
+```
+
+**Import Rules**:
+- Blank lines between import groups
+- Alphabetical sorting within each group
+- No unused imports (Ruff `F401`)
+- Group local imports by architecture layer
+
+### Documentation Requirements
+```python
+class User(BaseEntity):
+    """User entity representing a user in the system."""
+    
+    username: str = Field(..., description="Unique username of the user")
+
+async def create_user(self, command: CreateUserCommand) -> User:
+    """Create a new user with the provided command data.
+    
+    Args:
+        command: Command containing user creation data
+        
+    Returns:
+        Created user entity
+        
+    Raises:
+        DuplicateUsernameError: If username already exists
+        DuplicateEmailError: If email already exists
+    """
+```
+
+## Implementation Patterns
+
+### Entity Pattern
+```python
+from pydantic import Field
+from domain.base_entity import BaseEntity
+
+class User(BaseEntity):
+    """User entity representing a user in the system."""
+    
+    username: str = Field(..., description="Unique username of the user")
+    email: str = Field(..., description="Unique email address of the user")
+    # ... other fields with descriptions
+```
+
+### Value Object Pattern
+```python
+from enum import Enum
+
+class UserTypeEnum(str, Enum):
+    ADMIN = "admin"
+    USER = "user"
+    GUEST = "guest"
+```
+
+### Command/Query Pattern
+```python
+from pydantic import BaseModel, EmailStr
+
+class CreateUserCommand(BaseModel):
+    """Create user command"""
+    username: str
+    email: EmailStr
+    password: str
+    # ... other fields
+```
+
+### Repository Interface Pattern
+```python
+from abc import abstractmethod
+from domain.common.repository import BaseRepository
+
+class UserRepository(BaseRepository[User]):
+    """User repository interface"""
+    
+    @abstractmethod
+    async def get_by_username(self, username: str) -> User | None:
+        """Get user by username"""
+        pass
+```
+
+### Repository Implementation Pattern
+```python
+from sqlmodel import select
+from infrastructure.persistence.postgres.mappers.user_mapper import UserMapper
+
+class PostgreSQLUserRepositoryImpl(UserRepository):
+    """PostgreSQL user repository implementation"""
+    
+    def __init__(self, session: AsyncSession, mapper: UserMapper):
+        self.session = session
+        self.mapper = mapper
+    
+    async def get_by_id(self, user_id: str) -> User | None:
+        statement = select(UserModel).where(
+            UserModel.id == user_id,
+            UserModel.is_deleted.is_(False),
+        )
+        result = await self.session.execute(statement)
+        model = result.scalar_one_or_none()
+        return self.mapper.to_domain(model) if model else None
+```
+
+### Mapper Pattern
+```python
+class UserMapper(BaseMapper[User, UserModel]):
+    """User entity to model mapper"""
+    
+    def to_domain(self, model: UserModel) -> User:
+        """Convert database model to domain entity"""
+        return User(
+            id=model.id,
+            username=model.username,
+            # ... map all fields
+        )
+    
+    def to_model(self, entity: User) -> UserModel:
+        """Convert domain entity to database model"""
+        return UserModel(
+            id=entity.id,
+            username=entity.username,
+            # ... map all fields
+        )
+```
+
+### Application Service Pattern
+```python
+from passlib.context import CryptContext
+
+class UserService:
+    """User service for managing user operations"""
+    
+    def __init__(self, user_repository: UserRepository):
+        self.user_repository = user_repository
+        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+    
+    async def create_user(self, command: CreateUserCommand) -> User:
+        # Validation logic
+        # Business logic
+        # Repository calls
+        pass
+```
+
+### API Router Pattern
+```python
+from fastapi import APIRouter, Depends, status
+from interfaces.http.decorators import handle_exceptions
+
+router = APIRouter(prefix="/users", tags=["users"])
+
+@router.post(
+    "",
+    response_model=ApiResponse[UserResponse],
+    status_code=status.HTTP_201_CREATED,
+    summary="Create user",
+    description="Create a new user account",
+)
+@handle_exceptions
+async def create_user(
+    request: CreateUserRequest,
+    user_service: UserService = Depends(get_user_service),
+) -> ApiResponse[UserResponse]:
+    """Create user endpoint"""
+    command = CreateUserCommand(**request.model_dump())
+    user = await user_service.create_user(command)
+    user_response = UserResponse.model_validate(user.model_dump())
+    return ApiResponse.success(data=user_response, message="User created successfully")
+```
+
+### Response Pattern
+```python
+# Use ApiResponse for single items
+return ApiResponse.success(data=user_response, message="User created successfully")
+
+# Use PaginatedResponse for lists
+return PaginatedResponse.create(
+    items=user_responses, 
+    total=total, 
+    page=page, 
+    page_size=page_size
+)
+```
+
+### Exception Handling Pattern
+```python
+# Domain exceptions inherit from DomainError
+class DuplicateUsernameError(DomainError):
+    def __init__(self, username: str):
+        super().__init__(f"Username '{username}' already exists", "DUPLICATE_USERNAME")
+
+# Use @handle_exceptions decorator on API endpoints
+@handle_exceptions
+async def create_user(...):
+    pass
+```
+
+### Dependency Injection Pattern
+```python
+async def get_user_service(
+    user_repository: PostgreSQLUserRepositoryImpl = Depends(get_user_repository),
+) -> UserService:
+    """Get user service instance"""
+    return UserService(user_repository)
+```
+
+## Quality Requirements
+
+### Security Practices
+- ALWAYS hash passwords with bcrypt: `self.pwd_context.hash(password)`
+- Use JWT for authentication with proper expiration
+- Validate all inputs with Pydantic models
+- Use parameterized queries (SQLModel handles this)
+- Never log sensitive data (passwords, tokens)
+
+### Performance Guidelines
+- Use async/await for all I/O operations
+- Implement proper database connection pooling
+- Use pagination for list endpoints: `page: int = 1, page_size: int = 10`
+- Avoid N+1 queries with proper joins/eager loading
+- Use soft deletes: `is_deleted: bool = Field(default=False)`
+
+### Testing Requirements
+- Structure code for testability (dependency injection)
+- Keep business logic in services, not controllers
+- Use repository pattern for data access abstraction
+- Make functions pure when possible (no side effects)
+
+### Error Handling
+- Use custom domain exceptions for business rule violations
+- Map exceptions to HTTP status codes in interface layer
+- Provide meaningful error messages
+- Log errors with appropriate levels (error for 500s, info for 400s)
+
+## Code Generation Rules
+
+### Architecture Validation (CHECK FIRST)
+Before writing any code, ask:
+1. Which layer does this belong to? (Domain/Application/Infrastructure/Interface)
+2. What dependencies am I importing? (Check dependency flow rules)
+3. Am I violating the dependency inversion principle?
+4. Is this the right abstraction level for this layer?
+
+### When creating entities:
+1. Inherit from BaseEntity
+2. Add Field descriptions for all properties
+3. Use appropriate value objects for enums
+4. Place in domain/{aggregate}/entities.py
+5. Include business methods that maintain invariants
+
+### When creating repositories:
+1. Define interface in domain layer
+2. Implement in infrastructure layer with PostgreSQL prefix
+3. Use mapper pattern for entity/model conversion
+4. Include proper error handling and logging
+5. Always filter by is_deleted=False for soft deletes
+
+### When creating API endpoints:
+1. Use @handle_exceptions decorator
+2. Define request/response schemas
+3. Use dependency injection for services
+4. Return ApiResponse or PaginatedResponse
+5. Include proper OpenAPI documentation
+6. Log important operations with structured logging
+
+### When creating services:
+1. Place in application layer
+2. Accept repository interfaces, not implementations
+3. Handle business logic and validation
+4. Use command/query objects for parameters
+5. Include proper error handling
+6. Implement proper transaction boundaries
+
+### Database queries:
+1. Always filter by is_deleted=False for soft deletes
+2. Use proper indexing on commonly queried fields
+3. Include pagination for list operations
+4. Use transactions for multi-step operations
+5. Prevent N+1 queries with eager loading
+6. Use async patterns for all database operations
+
+## Quick Reference Checklists
+
+### Code Quality Checklist (MANDATORY)
+- [ ] Passes `ruff check .` without errors
+- [ ] Imports properly sorted (standard → third-party → local)
+- [ ] No unused imports or variables
+- [ ] Uses modern Python 3.12+ syntax
+- [ ] No unused function arguments (use `_` prefix if needed)
+- [ ] Proper type annotations
+
+### Entity Checklist
+- [ ] Inherits from BaseEntity
+- [ ] All fields have Field descriptions
+- [ ] Business methods included
+- [ ] Placed in domain/{aggregate}/entities.py
+- [ ] No imports from other layers
+- [ ] Passes Ruff checks
+
+### Repository Checklist
+- [ ] Interface in domain layer
+- [ ] Implementation in infrastructure layer
+- [ ] Uses mapper pattern
+- [ ] Includes error handling
+- [ ] Filters by is_deleted=False
+- [ ] Passes Ruff checks
+
+### API Endpoint Checklist
+- [ ] Uses @handle_exceptions decorator
+- [ ] Has request/response schemas
+- [ ] Uses dependency injection
+- [ ] Returns proper response type
+- [ ] Includes OpenAPI documentation
+- [ ] Passes Ruff checks
+
+### Service Checklist
+- [ ] Placed in application layer
+- [ ] Uses repository interfaces
+- [ ] Handles business logic
+- [ ] Uses command/query objects
+- [ ] Includes error handling
+- [ ] Passes Ruff checks
+
+## Anti-Patterns to Avoid
+
+### Ruff Violations (CRITICAL)
+❌ Any Ruff check failures (`ruff check .` must pass)
+❌ Unused imports (`F401`)
+❌ Undefined variables (`F821`)
+❌ Incorrect import sorting (`I001`)
+❌ Old-style type annotations (`UP007` - use `str | None` not `Union[str, None]`)
+❌ Unused function arguments without `_` prefix (`ARG001`)
+❌ Inefficient comprehensions (`C4`)
+
+### Architecture Violations
+❌ Direct entity-to-entity references across aggregates
+❌ Importing from higher layers (violates dependency inversion)
+❌ Business logic in controllers/routers
+❌ Hardcoded strings (use enums/constants)
+❌ Missing type annotations
+❌ Synchronous I/O operations
+❌ Exposing internal IDs in URLs without validation
+❌ Missing error handling
+❌ Inconsistent naming conventions
+❌ Missing docstrings for public methods
+❌ N+1 database queries
+❌ Missing soft delete f
+
+## Configuration
+- Use Pydantic Settings for configuration management
+- Support environment variables and .env files
+- Validate configuration on startup
+- Use computed fields for derived values
+- Keep sensitive data in environment variables
+
+## Code Quality Tools Integration
+
+### Ruff Configuration (pyproject.toml)
+The project uses Ruff for linting and formatting with these settings:
+- Target Python 3.12+
+- Enabled rules: E, W, F, I, B, C4, UP, ARG001
+- Auto-formatting with `ruff format`
+- Import sorting with `ruff check --fix`
+
+### Pre-commit Integration
+Ensure all code passes Ruff checks before committing:
+```bash
+# Run before committing
+ruff check .
+ruff format .
+
+# Or use pre-commit hooks
+pre-commit run --all-files
+```
+
+### IDE Integration
+Configure your IDE to run Ruff on save:
+- VSCode: Install Ruff extension
+- PyCharm: Configure Ruff as external tool
+- Cursor: Ruff integration built-in

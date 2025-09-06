@@ -55,7 +55,7 @@ exclude = ["venv", ".venv", "alembic"]
 [tool.ruff]
 # 將目標版本與 requires-python 同步
 target-version = "py312"
-exclude = ["alembic"]
+exclude = ["alembic",".cursorrules"]
 
 [tool.ruff.lint]
 select = [
