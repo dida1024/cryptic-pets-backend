@@ -294,25 +294,17 @@ class PostgreSQLPetRepositoryImpl(EventAwareRepository[Pet], PetRepository):
         """搜索宠物"""
         try:
             # 构建搜索条件
-            search_conditions = [
-                or_(
-                    cast(PetModel.name["en"], String).ilike(f"%{search_term}%"),
-                    cast(PetModel.name["zh"], String).ilike(f"%{search_term}%")
-                )
-            ]
-
-            # 添加过滤条件
+            search_conditions = []
             if owner_id:
                 search_conditions.append(PetModel.owner_id == owner_id)
-
             if breed_id:
                 search_conditions.append(PetModel.breed_id == breed_id)
-
             if morphology_id:
                 search_conditions.append(PetModel.morphology_id == morphology_id)
-
             if not include_deleted:
                 search_conditions.append(PetModel.is_deleted.is_(False))
+            if search_term:
+                search_conditions.append(PetModel.name.ilike(f"%{search_term}%"))
 
             # 组合所有条件
             where_clause = and_(*search_conditions)

@@ -1,12 +1,10 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import TypeVar
-
-from domain.common.repository_base import SpecificationRepository
 
 T = TypeVar('T')
 
 
-class BaseRepository[T](SpecificationRepository[T]):
+class BaseRepository[T](ABC):
     """基础Repository接口，定义通用CRUD操作"""
 
     @abstractmethod

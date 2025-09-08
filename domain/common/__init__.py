@@ -10,7 +10,6 @@ from .events import (
     get_event_bus,
     subscribe_to_event,
 )
-from .repository_base import SpecificationRepository
 
 __all__ = [
     "AggregateRoot",
@@ -22,5 +21,4 @@ __all__ = [
     "EventPublisher",
     "get_event_publisher",
     "register_event_handlers",
-    "SpecificationRepository",
 ]

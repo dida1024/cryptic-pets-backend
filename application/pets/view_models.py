@@ -109,7 +109,7 @@ class PetSummaryView(BaseModel):
     gender: GenderEnum
     created_at: datetime
     owner_name: str | None = None
-    breed_name: str | None = None
+    breed_name: I18n | None = None
     primary_picture_url: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

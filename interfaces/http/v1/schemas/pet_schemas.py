@@ -4,6 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from domain.common.entities import I18n
 from domain.pets.value_objects import GenderEnum
 from interfaces.http.v1.schemas.user_schemas import UserBaseSchema
 
@@ -72,5 +73,5 @@ class PetSummaryResponse(BaseModel):
     gender: GenderEnum = Field(..., description="宠物性别")
     created_at: datetime = Field(..., description="创建时间")
     owner_name: str | None = Field(None, description="主人名称")
-    breed_name: str | None = Field(None, description="品种名称")
+    breed_name: I18n | None = Field(None, description="品种名称")
     primary_picture_url: str | None = Field(None, description="主图URL")

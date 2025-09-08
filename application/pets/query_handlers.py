@@ -135,7 +135,7 @@ class PetQueryService:
                 breed = await self.breed_repository.get_by_id(pet.breed_id)
                 if breed and breed.name:
                     # 尝试获取当前语言的名称，默认为英语
-                    breed_name = breed.name.get("en", "")
+                    breed_name = breed.name
 
             # 创建摘要视图
             pet_view = PetSummaryView(
