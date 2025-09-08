@@ -13,7 +13,8 @@ class CreatePetCommand(BaseModel):
     description: str | None = None
     birth_date: datetime | None = None
     gender: GenderEnum = GenderEnum.UNKNOWN
-    description: str | None = None
+    morphology_id: str | None = None
+    extra_gene_list: list = None
 
 
 class UpdatePetCommand(BaseModel):
@@ -28,6 +29,14 @@ class UpdatePetCommand(BaseModel):
     breed_id: str | None = None
     birth_date: datetime | None = None
     gender: GenderEnum | None = None
+    morphology_id: str | None = None
+
+
+class TransferPetOwnershipCommand(BaseModel):
+    """转移宠物所有权命令"""
+    pet_id: str
+    new_owner_id: str
+    current_user_id: str
 
 
 class DeletePetCommand(BaseModel):

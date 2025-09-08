@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlmodel import String, cast
 
+from domain.common.event_publisher import EventPublisher
 from domain.pets.entities import Pet
 from domain.pets.exceptions import PetNotFoundError, PetRepositoryError
 from domain.pets.repository import PetRepository
@@ -14,12 +15,16 @@ from infrastructure.persistence.postgres.models.morph_gene_mapping import (
 )
 from infrastructure.persistence.postgres.models.morphology import MorphologyModel
 from infrastructure.persistence.postgres.models.pet import PetModel
+from infrastructure.persistence.postgres.repositories.event_aware_repository import (
+    EventAwareRepository,
+)
 
 
-class PostgreSQLPetRepositoryImpl(PetRepository):
+class PostgreSQLPetRepositoryImpl(EventAwareRepository[Pet], PetRepository):
     """宠物Repository的PostgreSQL实现"""
 
-    def __init__(self, session: AsyncSession, mapper: PetMapper):
+    def __init__(self, session: AsyncSession, mapper: PetMapper, event_publisher: EventPublisher):
+        super().__init__(event_publisher)
         self.session = session
         self.mapper = mapper
         self.logger = logger
@@ -57,7 +62,11 @@ class PostgreSQLPetRepositoryImpl(PetRepository):
             await self.session.flush()
             await self.session.refresh(model, attribute_names=['breed', 'morphology', 'extra_gene_list', 'owner'])
 
-            return self.mapper.to_domain(model)
+            # 转换为领域实体并发布事件
+            created_pet = self.mapper.to_domain(model)
+            await self._publish_events_from_entity(created_pet)
+
+            return created_pet
 
         except Exception as e:
             self.logger.error(f"Failed to create pet {entity.id}: {e}")
@@ -74,16 +83,20 @@ class PostgreSQLPetRepositoryImpl(PetRepository):
             existing_model.name = entity.name
             existing_model.description = entity.description
             existing_model.birth_date = entity.birth_date
-            existing_model.owner_id = entity.owner.id
-            existing_model.breed_id = entity.breed.id if entity.breed else None
+            existing_model.owner_id = entity.owner_id
+            existing_model.breed_id = entity.breed_id
             existing_model.gender = entity.gender
-            existing_model.morphology_id = entity.morphology.id if entity.morphology else None
+            existing_model.morphology_id = entity.morphology_id
             existing_model.updated_at = entity.updated_at
 
             await self.session.flush()
             await self.session.refresh(existing_model)
 
-            return self.mapper.to_domain(existing_model)
+            # 转换为领域实体并发布事件
+            updated_pet = self.mapper.to_domain(existing_model)
+            await self._publish_events_from_entity(updated_pet)
+
+            return updated_pet
 
         except PetNotFoundError:
             raise
@@ -98,8 +111,14 @@ class PostgreSQLPetRepositoryImpl(PetRepository):
             if model is None or model.is_deleted:
                 return False
 
+            # 先获取实体以发布删除事件
+            pet_entity = self.mapper.to_domain(model)
+
             model.is_deleted = True
             await self.session.flush()
+
+            # 发布删除事件
+            await self._publish_events_from_entity(pet_entity)
 
             return True
 

@@ -1,8 +1,11 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, List, TYPE_CHECKING
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
+
+if TYPE_CHECKING:
+    from domain.common.events import DomainEvent
 
 
 class BaseEntity(BaseModel):
@@ -23,6 +26,10 @@ class BaseEntity(BaseModel):
         }
     )
 
+    def __init__(self, **data):
+        super().__init__(**data)
+        self._domain_events: List["DomainEvent"] = []
+
     def mark_as_deleted(self) -> None:
         """Mark the entity as deleted and update the updated_at timestamp."""
         self.is_deleted = True
@@ -31,6 +38,18 @@ class BaseEntity(BaseModel):
     def _update_timestamp(self) -> None:
         """Update the updated_at timestamp."""
         self.updated_at = datetime.now()
+
+    def _add_domain_event(self, event: "DomainEvent") -> None:
+        """Add a domain event to be published."""
+        self._domain_events.append(event)
+
+    def get_domain_events(self) -> List["DomainEvent"]:
+        """Get all unpublished domain events."""
+        return self._domain_events.copy()
+
+    def clear_domain_events(self) -> None:
+        """Clear all domain events after publishing."""
+        self._domain_events.clear()
 
     def __eq__(self, other: Any) -> bool:
         """Entities are equal if their IDs are equal."""

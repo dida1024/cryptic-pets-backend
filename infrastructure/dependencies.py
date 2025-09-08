@@ -9,8 +9,17 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.breeds.handlers import BreedService
+from application.pets.command_handlers import (
+    CreatePetHandler,
+    DeletePetHandler,
+    TransferPetOwnershipHandler,
+    UpdatePetHandler,
+)
 from application.pets.handlers import PetService
+from application.pets.query_handlers import PetQueryService
 from application.users.handlers import UserService
+from domain.common.event_publisher import EventPublisher, get_event_publisher
+from domain.pets.services import PetDomainService
 from infrastructure.persistence.postgres.init_db import async_engine
 from infrastructure.persistence.postgres.mappers.breed_mapper import BreedMapper
 from infrastructure.persistence.postgres.mappers.gene_mapper import GeneMapper
@@ -25,6 +34,9 @@ from infrastructure.persistence.postgres.mappers.user_mapper import UserMapper
 from infrastructure.persistence.postgres.repositories.breed_repository_impl import (
     PostgreSQLBreedRepositoryImpl,
 )
+from infrastructure.persistence.postgres.repositories.morphology_repository_impl import (
+    PostgreSQLMorphologyRepositoryImpl,
+)
 from infrastructure.persistence.postgres.repositories.pet_repository_impl import (
     PostgreSQLPetRepositoryImpl,
 )
@@ -38,6 +50,11 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSession(async_engine, expire_on_commit=False) as session:
         async with session.begin():
             yield session
+
+
+async def get_event_publisher() -> EventPublisher:
+    """获取事件发布器实例"""
+    return get_event_publisher()
 
 
 # 数据库相关依赖
@@ -70,9 +87,10 @@ async def get_user_repository(
 async def get_pet_repository(
     session: AsyncSession = Depends(get_db_session),
     mapper: PetMapper = Depends(get_pet_mapper),
+    event_publisher: EventPublisher = Depends(get_event_publisher),
 ) -> PostgreSQLPetRepositoryImpl:
     """获取宠物仓储实例"""
-    return PostgreSQLPetRepositoryImpl(session, mapper)
+    return PostgreSQLPetRepositoryImpl(session, mapper, event_publisher)
 
 
 async def get_breed_repository(
@@ -81,6 +99,14 @@ async def get_breed_repository(
 ) -> PostgreSQLBreedRepositoryImpl:
     """获取品种仓储实例"""
     return PostgreSQLBreedRepositoryImpl(session, mapper)
+
+
+async def get_morphology_repository(
+    session: AsyncSession = Depends(get_db_session),
+    mapper: MorphologyMapper = Depends(lambda: MorphologyMapper(MorphGeneMappingMapper(GeneMapper()))),
+) -> PostgreSQLMorphologyRepositoryImpl:
+    """获取形态学仓储实例"""
+    return PostgreSQLMorphologyRepositoryImpl(session, mapper)
 
 
 async def get_user_service(
@@ -103,6 +129,84 @@ async def get_breed_service(
 ) -> BreedService:
     """获取品种服务实例"""
     return BreedService(breed_repository)
+
+
+async def get_pet_domain_service(
+    pet_repository: PostgreSQLPetRepositoryImpl = Depends(get_pet_repository),
+    user_repository: PostgreSQLUserRepositoryImpl = Depends(get_user_repository),
+    breed_repository: PostgreSQLBreedRepositoryImpl = Depends(get_breed_repository),
+    morphology_repository: PostgreSQLMorphologyRepositoryImpl = Depends(get_morphology_repository),
+) -> PetDomainService:
+    """获取宠物领域服务实例"""
+    return PetDomainService(
+        pet_repository=pet_repository,
+        user_repository=user_repository,
+        breed_repository=breed_repository,
+        morphology_repository=morphology_repository,
+    )
+
+
+async def get_pet_query_service(
+    pet_repository: PostgreSQLPetRepositoryImpl = Depends(get_pet_repository),
+    user_repository: PostgreSQLUserRepositoryImpl = Depends(get_user_repository),
+    breed_repository: PostgreSQLBreedRepositoryImpl = Depends(get_breed_repository),
+    morphology_repository: PostgreSQLMorphologyRepositoryImpl = Depends(get_morphology_repository),
+) -> PetQueryService:
+    """获取宠物查询服务实例"""
+    return PetQueryService(
+        pet_repository=pet_repository,
+        user_repository=user_repository,
+        breed_repository=breed_repository,
+        morphology_repository=morphology_repository,
+    )
+
+
+async def get_create_pet_handler(
+    pet_repository: PostgreSQLPetRepositoryImpl = Depends(get_pet_repository),
+    user_repository: PostgreSQLUserRepositoryImpl = Depends(get_user_repository),
+    breed_repository: PostgreSQLBreedRepositoryImpl = Depends(get_breed_repository),
+    pet_domain_service: PetDomainService = Depends(get_pet_domain_service),
+) -> CreatePetHandler:
+    """获取创建宠物命令处理器实例"""
+    return CreatePetHandler(
+        pet_repository=pet_repository,
+        user_repository=user_repository,
+        breed_repository=breed_repository,
+        pet_domain_service=pet_domain_service,
+    )
+
+
+async def get_transfer_pet_ownership_handler(
+    pet_repository: PostgreSQLPetRepositoryImpl = Depends(get_pet_repository),
+    user_repository: PostgreSQLUserRepositoryImpl = Depends(get_user_repository),
+    pet_domain_service: PetDomainService = Depends(get_pet_domain_service),
+) -> TransferPetOwnershipHandler:
+    """获取转移宠物所有权命令处理器实例"""
+    return TransferPetOwnershipHandler(
+        pet_repository=pet_repository,
+        user_repository=user_repository,
+        pet_domain_service=pet_domain_service,
+    )
+
+
+async def get_update_pet_handler(
+    pet_repository: PostgreSQLPetRepositoryImpl = Depends(get_pet_repository),
+    breed_repository: PostgreSQLBreedRepositoryImpl = Depends(get_breed_repository),
+    pet_domain_service: PetDomainService = Depends(get_pet_domain_service),
+) -> UpdatePetHandler:
+    """获取更新宠物命令处理器实例"""
+    return UpdatePetHandler(
+        pet_repository=pet_repository,
+        breed_repository=breed_repository,
+        pet_domain_service=pet_domain_service,
+    )
+
+
+async def get_delete_pet_handler(
+    pet_repository: PostgreSQLPetRepositoryImpl = Depends(get_pet_repository),
+) -> DeletePetHandler:
+    """获取删除宠物命令处理器实例"""
+    return DeletePetHandler(pet_repository=pet_repository)
 
 
 # 可以添加其他服务的依赖函数

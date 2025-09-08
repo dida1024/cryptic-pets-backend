@@ -10,7 +10,6 @@ from domain.pets.value_objects import (
     InheritanceTypeEnum,
     ZygosityEnum,
 )
-from domain.users.entities import User
 
 
 class Breed(BaseEntity):
@@ -33,7 +32,7 @@ class Gene(BaseEntity):
 
 
 class MorphGeneMapping(BaseEntity):
-    gene: Gene = Field(..., description="The gene in this morphology/pet")
+    gene_id: str = Field(..., description="ID of the gene in this morphology/pet")
     zygosity: ZygosityEnum = Field(default=ZygosityEnum.UNKNOWN, description="homozygous / heterozygous / unknown")
     is_required: bool = Field(default=True, description="Is this gene required for the morphology expression")
 
@@ -42,7 +41,7 @@ class Morphology(BaseEntity):
 
     name: I18n = Field(..., description="Name of the morphology keyed by locale")
     description: I18n | None = Field(default=None, description="Description of the morphology keyed by locale")
-    gene_mappings: list[MorphGeneMapping | None] = Field(default=[], description="List of genes")
+    gene_mapping_ids: list[str] = Field(default=[], description="List of gene mapping IDs")
     picture_list: list[Picture | None] = Field(default=[], description="List of pictures")
 
 
@@ -52,9 +51,38 @@ class Pet(BaseEntity):
     name: str = Field(..., description="Name of the pet")
     description: str | None = Field(None, description="Description of the pet")
     birth_date: datetime | None = Field(None, description="Birth date of the pet")
-    owner: User = Field(..., description="Owner of the pet")
-    breed: Breed = Field(..., description="Breed of the pet")
+    owner_id: str = Field(..., description="ID of the pet owner")
+    breed_id: str = Field(..., description="ID of the pet breed")
     gender: GenderEnum = Field(default=GenderEnum.UNKNOWN, description="Gender of the pet")
     extra_gene_list: list[MorphGeneMapping | None] = Field(default=[], description="List of extra genes")
-    morphology: Morphology | None = Field(None, description="Morphology of the pet")
+    morphology_id: str | None = Field(None, description="ID of the pet morphology")
     picture_list: list[Picture | None] = Field(default=[], description="List of pictures")
+    
+    def change_owner(self, new_owner_id: str) -> None:
+        """Change the owner of the pet and emit domain event."""
+        if not new_owner_id:
+            raise ValueError("Owner ID cannot be empty")
+            
+        old_owner_id = self.owner_id
+        self.owner_id = new_owner_id
+        self._update_timestamp()
+        
+        # Emit domain event
+        from domain.pets.events import PetOwnershipChangedEvent
+        self._add_domain_event(PetOwnershipChangedEvent(
+            pet_id=self.id,
+            old_owner_id=old_owner_id,
+            new_owner_id=new_owner_id
+        ))
+    
+    def update_morphology(self, morphology_id: str | None) -> None:
+        """Update the morphology of the pet and emit domain event."""
+        self.morphology_id = morphology_id
+        self._update_timestamp()
+        
+        # Emit domain event
+        from domain.pets.events import PetMorphologyUpdatedEvent
+        self._add_domain_event(PetMorphologyUpdatedEvent(
+            pet_id=self.id,
+            morphology_id=morphology_id
+        ))

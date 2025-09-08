@@ -1,26 +1,35 @@
+"""
+宠物命令处理器
+实现CQRS模式的命令部分，处理写操作
+"""
+
 from loguru import logger
+
+from domain.pets.entities import Pet
+from domain.pets.exceptions import (
+    BreedNotFoundError,
+    DuplicatePetNameError,
+    PetNotFoundError,
+)
+from domain.pets.repository import BreedRepository, PetRepository
+from domain.pets.services import PetDomainService, CreatePetData
+from domain.users.exceptions import UserNotFoundError
+from domain.users.repository import UserRepository
 from application.pets.commands import (
     CreatePetCommand,
     DeletePetCommand,
-    ListPetsQuery,
     TransferPetOwnershipCommand,
     UpdatePetCommand,
 )
-from domain.pets.entities import Pet
-from domain.pets.exceptions import BreedNotFoundError, PetNotFoundError
-from domain.pets.repository import BreedRepository, PetRepository
-from domain.pets.services import CreatePetData, PetDomainService
-from domain.users.exceptions import UserNotFoundError
-from domain.users.repository import UserRepository
 
 
-class PetService:
-    """宠物服务"""
-
+class CreatePetHandler:
+    """创建宠物命令处理器"""
+    
     def __init__(
-        self, 
-        pet_repository: PetRepository, 
-        user_repository: UserRepository, 
+        self,
+        pet_repository: PetRepository,
+        user_repository: UserRepository,
         breed_repository: BreedRepository,
         pet_domain_service: PetDomainService = None,
     ):
@@ -28,12 +37,12 @@ class PetService:
         self.user_repository = user_repository
         self.breed_repository = breed_repository
         self.pet_domain_service = pet_domain_service
-
-    async def create_pet(self, command: CreatePetCommand) -> Pet:
-        """创建宠物"""
+        self.logger = logger
+    
+    async def handle(self, command: CreatePetCommand) -> Pet:
+        """处理创建宠物命令"""
         # 检查宠物名是否已存在
         if await self.pet_repository.exists_by_name(command.name):
-            from domain.pets.exceptions import DuplicatePetNameError
             raise DuplicatePetNameError(f"Pet name '{command.name}' already exists")
         
         # 如果有领域服务，使用领域服务创建宠物（包含跨聚合验证）
@@ -45,12 +54,12 @@ class PetService:
                 breed_id=command.breed_id,
                 birth_date=command.birth_date,
                 gender=command.gender,
-                morphology_id=getattr(command, "morphology_id", None),
-                extra_gene_list=getattr(command, "extra_gene_list", None),
+                morphology_id=command.morphology_id,
+                extra_gene_list=command.extra_gene_list,
             )
             
             # 使用领域服务创建宠物（包含跨聚合验证）
-            logger.info(f"Creating pet using domain service: {pet_data}")
+            self.logger.info(f"Creating pet using domain service: {pet_data}")
             return await self.pet_domain_service.create_pet_with_validation(
                 pet_data=pet_data,
                 owner_id=command.owner_id,
@@ -75,7 +84,7 @@ class PetService:
                 birth_date=command.birth_date,
                 gender=command.gender,
             )
-            logger.info(f"Creating pet: {pet}")
+            self.logger.info(f"Creating pet: {pet}")
 
             # 保存宠物
             created_pet = await self.pet_repository.create(pet)
@@ -90,27 +99,26 @@ class PetService:
             
             return created_pet
 
-    async def get_pet_by_id(self, pet_id: str) -> Pet:
-        """根据ID获取宠物"""
-        pet = await self.pet_repository.get_by_id(pet_id)
-        if not pet:
-            raise PetNotFoundError(f"Pet with id '{pet_id}' not found")
-        return pet
 
-    async def get_pet_by_name(self, name: str) -> Pet:
-        """根据宠物名获取宠物"""
-        pet = await self.pet_repository.get_by_name(name)
-        if not pet:
-            raise PetNotFoundError(f"Pet with name '{name}' not found")
-        return pet
-
-
-
-    async def transfer_pet_ownership(self, command: TransferPetOwnershipCommand) -> Pet:
-        """转移宠物所有权"""
+class TransferPetOwnershipHandler:
+    """转移宠物所有权命令处理器"""
+    
+    def __init__(
+        self,
+        pet_repository: PetRepository,
+        user_repository: UserRepository,
+        pet_domain_service: PetDomainService = None,
+    ):
+        self.pet_repository = pet_repository
+        self.user_repository = user_repository
+        self.pet_domain_service = pet_domain_service
+        self.logger = logger
+    
+    async def handle(self, command: TransferPetOwnershipCommand) -> Pet:
+        """处理转移宠物所有权命令"""
         # 如果有领域服务，使用领域服务转移所有权（包含业务规则验证）
         if self.pet_domain_service:
-            logger.info(f"Transferring pet ownership using domain service: {command}")
+            self.logger.info(f"Transferring pet ownership using domain service: {command}")
             return await self.pet_domain_service.transfer_pet_ownership(
                 pet_id=command.pet_id,
                 new_owner_id=command.new_owner_id,
@@ -120,7 +128,9 @@ class PetService:
         # 如果没有领域服务，使用原来的方式转移所有权
         else:
             # 获取宠物
-            pet = await self.get_pet_by_id(command.pet_id)
+            pet = await self.pet_repository.get_by_id(command.pet_id)
+            if not pet:
+                raise PetNotFoundError(command.pet_id)
             
             # 验证当前用户是否是宠物的主人
             if pet.owner_id != command.current_user_id:
@@ -142,16 +152,32 @@ class PetService:
             
             # 保存更新
             return await self.pet_repository.update(pet)
+
+
+class UpdatePetHandler:
+    """更新宠物命令处理器"""
     
-    async def update_pet(self, command: UpdatePetCommand) -> Pet:
-        """更新宠物"""
+    def __init__(
+        self,
+        pet_repository: PetRepository,
+        breed_repository: BreedRepository,
+        pet_domain_service: PetDomainService = None,
+    ):
+        self.pet_repository = pet_repository
+        self.breed_repository = breed_repository
+        self.pet_domain_service = pet_domain_service
+        self.logger = logger
+    
+    async def handle(self, command: UpdatePetCommand) -> Pet:
+        """处理更新宠物命令"""
         # 获取现有宠物
-        pet = await self.get_pet_by_id(command.pet_id)
+        pet = await self.pet_repository.get_by_id(command.pet_id)
+        if not pet:
+            raise PetNotFoundError(command.pet_id)
 
         # 检查宠物名唯一性
         if command.name and command.name != pet.name:
             if await self.pet_repository.exists_by_name(command.name, exclude_id=pet.id):
-                from domain.pets.exceptions import DuplicatePetNameError
                 raise DuplicatePetNameError(f"Pet name '{command.name}' already exists")
 
         if command.name is not None:
@@ -184,21 +210,19 @@ class PetService:
         return await self.pet_repository.update(pet)
 
 
-    async def delete_pet(self, command: DeletePetCommand) -> bool:
-        """删除宠物（软删除）"""
+class DeletePetHandler:
+    """删除宠物命令处理器"""
+    
+    def __init__(self, pet_repository: PetRepository):
+        self.pet_repository = pet_repository
+        self.logger = logger
+    
+    async def handle(self, command: DeletePetCommand) -> bool:
+        """处理删除宠物命令"""
         # 检查宠物是否存在
         pet = await self.pet_repository.get_by_id(command.pet_id)
         if not pet:
-            raise PetNotFoundError(f"Pet with id '{command.pet_id}' not found")
+            raise PetNotFoundError(command.pet_id)
 
         # 执行软删除
         return await self.pet_repository.delete(command.pet_id)
-
-    async def list_all(self, query: ListPetsQuery) -> tuple[list[Pet], int]:
-        """获取宠物列表"""
-        return await self.pet_repository.list_all(
-            page=query.page,
-            page_size=query.page_size,
-            search=query.search,
-            owner_id=query.owner_id,
-        )

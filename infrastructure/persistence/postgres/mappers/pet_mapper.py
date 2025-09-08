@@ -32,13 +32,7 @@ class PetMapper(BaseMapper[Pet, PetModel]):
     def to_domain(self, model: PetModel) -> Pet:
         """数据库模型转换为领域实体"""
         logger.info(f"Converting pet model: {model}")
-        breed = self.breed_mapper.to_domain(model.breed) if model.breed else None
-
-        # 转换形态学
-        morphology = None
-        if model.morphology:
-            morphology = self.morphology_mapper.to_domain(model.morphology)
-
+        
         # 转换额外基因列表
         extra_gene_list = []
         if model.extra_gene_list:
@@ -46,17 +40,17 @@ class PetMapper(BaseMapper[Pet, PetModel]):
                 self.gene_mapping_mapper.to_domain(mapping)
                 for mapping in model.extra_gene_list
             ]
-        owner = self.user_mapper.to_domain(model.owner)
+            
         return Pet(
             id=model.id,
             name=model.name,
             description=model.description,
             birth_date=model.birth_date,
-            owner=owner,
-            breed=breed,
+            owner_id=model.owner_id,
+            breed_id=model.breed_id,
             gender=model.gender,
             extra_gene_list=extra_gene_list,
-            morphology=morphology,
+            morphology_id=model.morphology_id,
             picture_list=[],  # TODO: 实现图片转换逻辑
             created_at=model.created_at,
             updated_at=model.updated_at,
@@ -70,10 +64,10 @@ class PetMapper(BaseMapper[Pet, PetModel]):
             name=entity.name,
             description=entity.description,
             birth_date=entity.birth_date,
-            owner_id=entity.owner.id,
-            breed_id=entity.breed.id if entity.breed else None,
+            owner_id=entity.owner_id,
+            breed_id=entity.breed_id,
             gender=entity.gender,
-            morphology_id=entity.morphology.id if entity.morphology else None,
+            morphology_id=entity.morphology_id,
             created_at=entity.created_at,
             updated_at=entity.updated_at,
             is_deleted=entity.is_deleted,

@@ -8,6 +8,7 @@ from domain.pets.entities import Morphology
 from domain.pets.exceptions import MorphologyNotFoundError, MorphologyRepositoryError
 from domain.pets.repository import MorphologyRepository
 from infrastructure.persistence.postgres.mappers import MorphologyMapper
+from infrastructure.persistence.postgres.models.breed import BreedModel
 from infrastructure.persistence.postgres.models.morph_gene_mapping import (
     MorphGeneMappingModel,
 )
@@ -251,6 +252,34 @@ class PostgreSQLMorphologyRepositoryImpl(MorphologyRepository):
                 "get_morphologies_containing_gene",
             )
 
+    async def is_compatible_with_breed(self, morphology_id: str, breed_id: str) -> bool:
+        """检查形态学是否与品种兼容"""
+        try:
+            # 在实际实现中，这里应该检查形态学和品种的兼容性
+            # 例如，检查形态学的基因是否与品种的基因兼容
+            # 简化起见，这里假设所有形态学都与品种兼容
+            
+            # 首先检查形态学和品种是否存在
+            morphology_exists = await self.session.get(MorphologyModel, morphology_id) is not None
+            breed_exists = await self.session.get(BreedModel, breed_id) is not None
+            
+            if not morphology_exists or not breed_exists:
+                return False
+                
+            # 在实际应用中，这里应该有更复杂的兼容性检查逻辑
+            # 例如，检查形态学的基因是否与品种的基因兼容
+            # 简化起见，这里假设所有存在的形态学都与品种兼容
+            return True
+            
+        except Exception as e:
+            self.logger.error(
+                f"Failed to check morphology {morphology_id} compatibility with breed {breed_id}: {e}"
+            )
+            raise MorphologyRepositoryError(
+                f"Failed to check morphology compatibility: {e}", 
+                "is_compatible_with_breed"
+            )
+    
     async def search_morphologies(
         self,
         search_term: str,
