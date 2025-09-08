@@ -1,5 +1,5 @@
 from loguru import logger
-from sqlalchemy import ColumnElement, UnaryExpression, func, or_
+from sqlalchemy import ColumnElement, UnaryExpression, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 

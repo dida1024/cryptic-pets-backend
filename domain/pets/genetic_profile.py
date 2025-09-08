@@ -68,12 +68,12 @@ class GeneticProfile(ValueObject):
         """Validate gene expressions dictionary."""
         if not v:
             raise ValueError("Genetic profile must contain at least one gene expression")
-        
+
         # Check for duplicate gene IDs
         gene_ids = [expr.gene_id for expr in v.values()]
         if len(gene_ids) != len(set(gene_ids)):
             raise ValueError("Duplicate gene IDs found in genetic profile")
-        
+
         return v
 
     @field_validator('profile_name')
@@ -105,29 +105,29 @@ class GeneticProfile(ValueObject):
         """Remove a gene expression from the profile."""
         if gene_id not in self.gene_expressions:
             raise ValueError(f"Gene expression for {gene_id} not found")
-        
+
         updated_expressions = dict(self.gene_expressions)
         del updated_expressions[gene_id]
-        
+
         if not updated_expressions:
             raise ValueError("Cannot remove the last gene expression from profile")
-        
+
         return self.copy_with(gene_expressions=updated_expressions)
 
     def update_gene_expression(self, gene_id: str, zygosity: ZygosityEnum, expression_level: float) -> "GeneticProfile":
         """Update a gene expression in the profile."""
         if gene_id not in self.gene_expressions:
             raise ValueError(f"Gene expression for {gene_id} not found")
-        
+
         current_expr = self.gene_expressions[gene_id]
         updated_expr = current_expr.copy_with(
             zygosity=zygosity,
             expression_level=expression_level
         )
-        
+
         updated_expressions = dict(self.gene_expressions)
         updated_expressions[gene_id] = updated_expr
-        
+
         return self.copy_with(gene_expressions=updated_expressions)
 
     def get_gene_expression(self, gene_id: str) -> GeneExpression | None:
@@ -161,9 +161,9 @@ class GeneticProfile(ValueObject):
         recessive_count = len(self.get_recessive_genes())
         heterozygous_count = len(self.get_heterozygous_genes())
         homozygous_count = len(self.get_homozygous_genes())
-        
+
         avg_expression = sum(expr.expression_level for expr in self.gene_expressions.values()) / total_genes if total_genes > 0 else 0.0
-        
+
         return {
             "total_genes": total_genes,
             "dominant_genes": dominant_count,
@@ -178,23 +178,23 @@ class GeneticProfile(ValueObject):
         """Calculate compatibility score with another genetic profile."""
         if not self.gene_expressions or not other.gene_expressions:
             return 0.0
-        
+
         common_genes = set(self.gene_expressions.keys()) & set(other.gene_expressions.keys())
         if not common_genes:
             return 0.0
-        
+
         total_score = 0.0
         for gene_id in common_genes:
             self_expr = self.gene_expressions[gene_id]
             other_expr = other.gene_expressions[gene_id]
-            
+
             # Calculate similarity based on zygosity and expression level
             zygosity_match = 1.0 if self_expr.zygosity == other_expr.zygosity else 0.5
             expression_similarity = 1.0 - abs(self_expr.expression_level - other_expr.expression_level)
-            
+
             gene_score = (zygosity_match + expression_similarity) / 2.0
             total_score += gene_score
-        
+
         return total_score / len(common_genes)
 
     def is_compatible_with(self, other: "GeneticProfile", threshold: float = 0.7) -> bool:
@@ -205,19 +205,19 @@ class GeneticProfile(ValueObject):
         """Get breeding predictions with another genetic profile."""
         if not self.gene_expressions or not other.gene_expressions:
             return {"error": "Both profiles must contain gene expressions"}
-        
+
         predictions = {
             "compatibility_score": self.get_compatibility_score(other),
             "potential_offspring_traits": [],
             "genetic_diversity": 0.0,
             "risk_factors": []
         }
-        
+
         # Analyze potential offspring traits
         for gene_id in set(self.gene_expressions.keys()) | set(other.gene_expressions.keys()):
             self_expr = self.gene_expressions.get(gene_id)
             other_expr = other.gene_expressions.get(gene_id)
-            
+
             if self_expr and other_expr:
                 # Both parents have this gene
                 if self_expr.is_homozygous() and other_expr.is_homozygous():
@@ -243,12 +243,12 @@ class GeneticProfile(ValueObject):
                     "offspring_zygosity": "heterozygous",
                     "probability": 0.5
                 })
-        
+
         # Calculate genetic diversity
         all_genes = set(self.gene_expressions.keys()) | set(other.gene_expressions.keys())
         common_genes = set(self.gene_expressions.keys()) & set(other.gene_expressions.keys())
         predictions["genetic_diversity"] = len(common_genes) / len(all_genes) if all_genes else 0.0
-        
+
         return predictions
 
     def __len__(self) -> int:

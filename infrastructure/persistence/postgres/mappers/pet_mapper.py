@@ -1,6 +1,6 @@
 
 from loguru import logger
-from domain.common.entities import I18n
+
 from domain.pets.entities import Pet
 from infrastructure.persistence.postgres.mappers.base import BaseMapper
 from infrastructure.persistence.postgres.mappers.breed_mapper import BreedMapper
@@ -32,7 +32,7 @@ class PetMapper(BaseMapper[Pet, PetModel]):
     def to_domain(self, model: PetModel) -> Pet:
         """数据库模型转换为领域实体"""
         logger.info(f"Converting pet model: {model}")
-        
+
         # 转换额外基因列表
         extra_gene_list = []
         if model.extra_gene_list:
@@ -40,7 +40,7 @@ class PetMapper(BaseMapper[Pet, PetModel]):
                 self.gene_mapping_mapper.to_domain(mapping)
                 for mapping in model.extra_gene_list
             ]
-            
+
         return Pet(
             id=model.id,
             name=model.name,

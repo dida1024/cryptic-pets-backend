@@ -7,7 +7,7 @@ from domain.users.events import UserCreatedEvent
 
 class PetCreatedEventHandler(DomainEventHandler):
     """Handler for pet created events."""
-    
+
     async def handle(self, event: PetCreatedEvent) -> None:
         """Handle pet created event."""
         # Example: Log the event, update statistics, send notifications, etc.
@@ -16,7 +16,7 @@ class PetCreatedEventHandler(DomainEventHandler):
 
 class PetOwnershipChangedEventHandler(DomainEventHandler):
     """Handler for pet ownership changed events."""
-    
+
     async def handle(self, event: PetOwnershipChangedEvent) -> None:
         """Handle pet ownership changed event."""
         # Example: Update ownership history, notify users, etc.
@@ -25,7 +25,7 @@ class PetOwnershipChangedEventHandler(DomainEventHandler):
 
 class UserCreatedEventHandler(DomainEventHandler):
     """Handler for user created events."""
-    
+
     async def handle(self, event: UserCreatedEvent) -> None:
         """Handle user created event."""
         # Example: Send welcome email, create user profile, etc.
@@ -48,12 +48,12 @@ async def setup_user_profile(event: UserCreatedEvent) -> None:
 def register_event_handlers() -> None:
     """Register all event handlers with the event bus."""
     from domain.common.events import get_event_bus
-    
+
     event_bus = get_event_bus()
-    
+
     # Register class-based handlers
     event_bus.subscribe(PetCreatedEvent, PetCreatedEventHandler())
     event_bus.subscribe(PetOwnershipChangedEvent, PetOwnershipChangedEventHandler())
     event_bus.subscribe(UserCreatedEvent, UserCreatedEventHandler())
-    
+
     # Decorator-based handlers are automatically registered

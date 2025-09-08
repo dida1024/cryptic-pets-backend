@@ -17,7 +17,6 @@ from interfaces.http.v1.schemas.breed_schemas import (
     UpdateBreedRequest,
 )
 
-
 router = APIRouter(prefix="/breeds", tags=["breeds"])
 
 

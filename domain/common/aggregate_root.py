@@ -1,6 +1,6 @@
 """Aggregate root base class with enhanced domain event support."""
 
-from typing import List, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from domain.base_entity import BaseEntity
 
@@ -17,7 +17,7 @@ class AggregateRoot(BaseEntity):
 
     def add_domain_event(self, event: "DomainEvent") -> None:
         """Add a domain event to be published.
-        
+
         This is the public interface for adding domain events.
         """
         self._add_domain_event(event)

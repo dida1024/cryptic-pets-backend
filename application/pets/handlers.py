@@ -1,4 +1,5 @@
 from loguru import logger
+
 from application.pets.commands import (
     CreatePetCommand,
     DeletePetCommand,
@@ -18,9 +19,9 @@ class PetService:
     """宠物服务"""
 
     def __init__(
-        self, 
-        pet_repository: PetRepository, 
-        user_repository: UserRepository, 
+        self,
+        pet_repository: PetRepository,
+        user_repository: UserRepository,
         breed_repository: BreedRepository,
         pet_domain_service: PetDomainService = None,
     ):
@@ -35,7 +36,7 @@ class PetService:
         if await self.pet_repository.exists_by_name(command.name):
             from domain.pets.exceptions import DuplicatePetNameError
             raise DuplicatePetNameError(f"Pet name '{command.name}' already exists")
-        
+
         # 如果有领域服务，使用领域服务创建宠物（包含跨聚合验证）
         if self.pet_domain_service:
             # 创建领域服务所需的数据传输对象
@@ -48,14 +49,14 @@ class PetService:
                 morphology_id=getattr(command, "morphology_id", None),
                 extra_gene_list=getattr(command, "extra_gene_list", None),
             )
-            
+
             # 使用领域服务创建宠物（包含跨聚合验证）
             logger.info(f"Creating pet using domain service: {pet_data}")
             return await self.pet_domain_service.create_pet_with_validation(
                 pet_data=pet_data,
                 owner_id=command.owner_id,
             )
-        
+
         # 如果没有领域服务，使用原来的方式创建宠物
         else:
             # 验证用户和品种存在
@@ -65,7 +66,7 @@ class PetService:
             breed = await self.breed_repository.get_by_id(command.breed_id)
             if not breed:
                 raise BreedNotFoundError(f"Breed with id '{command.breed_id}' not found")
-                
+
             # 创建宠物实体
             pet = Pet(
                 name=command.name,
@@ -79,7 +80,7 @@ class PetService:
 
             # 保存宠物
             created_pet = await self.pet_repository.create(pet)
-            
+
             # 添加领域事件
             from domain.pets.events import PetCreatedEvent
             created_pet._add_domain_event(PetCreatedEvent(
@@ -87,7 +88,7 @@ class PetService:
                 owner_id=created_pet.owner_id,
                 breed_id=created_pet.breed_id
             ))
-            
+
             return created_pet
 
     async def get_pet_by_id(self, pet_id: str) -> Pet:
@@ -116,33 +117,33 @@ class PetService:
                 new_owner_id=command.new_owner_id,
                 current_user_id=command.current_user_id,
             )
-        
+
         # 如果没有领域服务，使用原来的方式转移所有权
         else:
             # 获取宠物
             pet = await self.get_pet_by_id(command.pet_id)
-            
+
             # 验证当前用户是否是宠物的主人
             if pet.owner_id != command.current_user_id:
                 from domain.pets.exceptions import UnauthorizedPetAccessError
                 raise UnauthorizedPetAccessError("Only the current owner can transfer ownership")
-            
+
             # 验证新主人是否存在
             new_owner = await self.user_repository.get_by_id(command.new_owner_id)
             if not new_owner:
                 raise UserNotFoundError(f"New owner with id '{command.new_owner_id}' not found")
-            
+
             # 验证不能转移给自己
             if pet.owner_id == command.new_owner_id:
                 from domain.pets.exceptions import InvalidOwnershipTransferError
                 raise InvalidOwnershipTransferError("Cannot transfer pet to the same owner")
-            
+
             # 执行转移
             pet.change_owner(command.new_owner_id)
-            
+
             # 保存更新
             return await self.pet_repository.update(pet)
-    
+
     async def update_pet(self, command: UpdatePetCommand) -> Pet:
         """更新宠物"""
         # 获取现有宠物

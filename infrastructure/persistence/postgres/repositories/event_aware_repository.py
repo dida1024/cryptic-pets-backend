@@ -2,8 +2,8 @@
 
 from typing import TypeVar
 
-from domain.common.events import DomainEvent
 from domain.common.event_publisher import EventPublisher
+from domain.common.events import DomainEvent
 from domain.common.repository import BaseRepository
 
 T = TypeVar('T')

@@ -1,6 +1,5 @@
 """Enhanced I18n value object with improved immutability and validation."""
 
-from typing import Any
 
 from pydantic import Field, field_validator
 
@@ -26,12 +25,12 @@ class I18n(ValueObject):
         """Validate the content dictionary."""
         if not v:
             raise ValueError("I18n content cannot be empty")
-        
+
         # Validate that all values are non-empty strings
         for lang, text in v.items():
             if not isinstance(text, str) or not text.strip():
                 raise ValueError(f"Text for language {lang} cannot be empty")
-        
+
         return v
 
     def get_text(self, language: I18nEnum | str, fallback_language: I18nEnum | str | None = None) -> str | None:
@@ -56,11 +55,11 @@ class I18n(ValueObject):
         """Create a new I18n instance with updated text for the specified language."""
         if not text.strip():
             raise ValueError("Text cannot be empty")
-        
+
         lang_enum = self._to_enum(language)
         updated_content = dict(self.content)
         updated_content[lang_enum] = text.strip()
-        
+
         return I18n(content=updated_content)
 
     def without_language(self, language: I18nEnum | str) -> "I18n":
@@ -68,10 +67,10 @@ class I18n(ValueObject):
         lang_enum = self._to_enum(language)
         updated_content = dict(self.content)
         updated_content.pop(lang_enum, None)
-        
+
         if not updated_content:
             raise ValueError("Cannot remove the last language from I18n")
-        
+
         return I18n(content=updated_content)
 
     def has_language(self, language: I18nEnum | str) -> bool:
@@ -93,7 +92,7 @@ class I18n(ValueObject):
         """Check if the I18n instance has text for all required languages."""
         if required_languages is None:
             required_languages = list(I18nEnum)
-        
+
         return all(lang in self.content for lang in required_languages)
 
     def _to_enum(self, language: I18nEnum | str) -> I18nEnum:
@@ -122,7 +121,7 @@ class I18n(ValueObject):
                 content[lang_enum] = text
             except ValueError:
                 raise ValueError(f"Invalid language code: {lang_str}")
-        
+
         return cls(content=content)
 
     @classmethod
@@ -130,7 +129,7 @@ class I18n(ValueObject):
         """Create I18n instance with text for a single language."""
         if not text.strip():
             raise ValueError("Text cannot be empty")
-        
+
         lang_enum = cls._to_enum(language)
         return cls(content={lang_enum: text.strip()})
 
@@ -139,7 +138,7 @@ class I18n(ValueObject):
         """Create I18n instance with both Chinese and English text."""
         if not zh_text.strip() or not en_text.strip():
             raise ValueError("Both Chinese and English text must be provided")
-        
+
         return cls(content={
             I18nEnum.ZH_CN: zh_text.strip(),
             I18nEnum.EN_US: en_text.strip()

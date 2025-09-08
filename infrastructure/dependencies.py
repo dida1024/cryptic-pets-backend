@@ -51,12 +51,6 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
         async with session.begin():
             yield session
 
-
-async def get_event_publisher() -> EventPublisher:
-    """获取事件发布器实例"""
-    return get_event_publisher()
-
-
 # 数据库相关依赖
 async def get_user_mapper() -> UserMapper:
     """获取用户映射器实例"""

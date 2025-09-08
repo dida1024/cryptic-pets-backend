@@ -15,28 +15,28 @@ class PetDomainError(DomainError):
 
 class OwnerNotFoundError(EntityNotFoundError):
     """宠物主人未找到异常"""
-    
+
     def __init__(self, message: str):
         super().__init__("User", message)
 
 
 class UnauthorizedPetAccessError(BusinessRuleViolationError):
     """未授权的宠物访问异常"""
-    
+
     def __init__(self, message: str):
         super().__init__(message, "UNAUTHORIZED_PET_ACCESS")
 
 
 class InvalidOwnershipTransferError(BusinessRuleViolationError):
     """无效的所有权转移异常"""
-    
+
     def __init__(self, message: str):
         super().__init__(message, "INVALID_OWNERSHIP_TRANSFER")
 
 
 class IncompatibleMorphologyError(BusinessRuleViolationError):
     """不兼容的形态学异常"""
-    
+
     def __init__(self, message: str):
         super().__init__(message, "INCOMPATIBLE_MORPHOLOGY")
 

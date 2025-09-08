@@ -118,17 +118,17 @@ class OwnershipHistory(ValueObject):
         """Validate ownership records."""
         if not v:
             return v
-        
+
         # Check for chronological order
         for i in range(1, len(v)):
             if v[i].start_date < v[i-1].start_date:
                 raise ValueError("Ownership records must be in chronological order")
-        
+
         # Check that only the last record can have no end_date
-        for i, record in enumerate(v[:-1]):
+        for _, record in enumerate(v[:-1]):
             if record.end_date is None:
                 raise ValueError("Only the last ownership record can have no end_date")
-        
+
         return v
 
     @classmethod
@@ -137,7 +137,7 @@ class OwnershipHistory(ValueObject):
         return cls(pet_id=pet_id, ownership_records=[])
 
     @classmethod
-    def create_with_initial_owner(cls, pet_id: str, owner_id: str, owner_name: str | None = None, 
+    def create_with_initial_owner(cls, pet_id: str, owner_id: str, owner_name: str | None = None,
                                  transfer_type: str = "adoption") -> "OwnershipHistory":
         """Create ownership history with initial owner."""
         initial_record = OwnershipRecord(
@@ -163,9 +163,9 @@ class OwnershipHistory(ValueObject):
                     # End the current ownership
                     ended_record = last_record.copy_with(end_date=record.start_date)
                     current_records[-1] = ended_record
-            
+
             new_records = current_records + [record]
-        
+
         return self.copy_with(
             ownership_records=new_records,
             updated_at=datetime.utcnow()
@@ -199,7 +199,7 @@ class OwnershipHistory(ValueObject):
         """Get all previous owner records."""
         if not self.ownership_records:
             return []
-        
+
         # Return all records except the current one
         return [record for record in self.ownership_records if not record.is_current_owner()]
 
@@ -211,7 +211,7 @@ class OwnershipHistory(ValueObject):
         """Get total ownership duration for a specific owner in days."""
         total_days = 0
         found_owner = False
-        
+
         for record in self.ownership_records:
             if record.owner_id == owner_id:
                 found_owner = True
@@ -221,7 +221,7 @@ class OwnershipHistory(ValueObject):
                 else:
                     # Current owner, add days since start
                     total_days += (datetime.utcnow() - record.start_date).days
-        
+
         return total_days if found_owner else None
 
     def get_ownership_summary(self) -> dict[str, Any]:
@@ -235,27 +235,27 @@ class OwnershipHistory(ValueObject):
                 "shortest_ownership": 0,
                 "transfer_types": {}
             }
-        
+
         current_owner = self.get_current_owner()
         previous_owners = self.get_previous_owners()
-        
+
         # Calculate durations for previous owners
         durations = []
         transfer_types = {}
-        
+
         for record in previous_owners:
             duration = record.get_ownership_duration()
             if duration is not None:
                 durations.append(duration)
-            
+
             transfer_type = record.transfer_type
             transfer_types[transfer_type] = transfer_types.get(transfer_type, 0) + 1
-        
+
         # Add current owner duration if applicable
         if current_owner:
             current_duration = (datetime.utcnow() - current_owner.start_date).days
             durations.append(current_duration)
-        
+
         return {
             "total_owners": len(self.ownership_records),
             "current_owner": {
@@ -277,7 +277,7 @@ class OwnershipHistory(ValueObject):
     def get_ownership_timeline(self) -> list[dict[str, Any]]:
         """Get ownership timeline as a list of events."""
         timeline = []
-        
+
         for record in self.ownership_records:
             timeline.append({
                 "event_type": "ownership_start",
@@ -287,7 +287,7 @@ class OwnershipHistory(ValueObject):
                 "transfer_type": record.transfer_type,
                 "transfer_reason": record.transfer_reason
             })
-            
+
             if record.end_date:
                 timeline.append({
                     "event_type": "ownership_end",
@@ -296,7 +296,7 @@ class OwnershipHistory(ValueObject):
                     "date": record.end_date.isoformat(),
                     "duration_days": record.get_ownership_duration()
                 })
-        
+
         return sorted(timeline, key=lambda x: x["date"])
 
     def __len__(self) -> int:
@@ -307,7 +307,7 @@ class OwnershipHistory(ValueObject):
         """String representation of the ownership history."""
         current_owner = self.get_current_owner()
         owner_count = len(self.ownership_records)
-        
+
         if current_owner:
             return f"Pet {self.pet_id} - {owner_count} owners, current: {current_owner.owner_id}"
         else:

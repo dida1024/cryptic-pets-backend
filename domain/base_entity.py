@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, List, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -28,7 +28,7 @@ class BaseEntity(BaseModel):
 
     def __init__(self, **data):
         super().__init__(**data)
-        self._domain_events: List["DomainEvent"] = []
+        self._domain_events: list[DomainEvent] = []
 
     def mark_as_deleted(self) -> None:
         """Mark the entity as deleted and update the updated_at timestamp."""
@@ -43,7 +43,7 @@ class BaseEntity(BaseModel):
         """Add a domain event to be published."""
         self._domain_events.append(event)
 
-    def get_domain_events(self) -> List["DomainEvent"]:
+    def get_domain_events(self) -> list["DomainEvent"]:
         """Get all unpublished domain events."""
         return self._domain_events.copy()
 

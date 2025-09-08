@@ -57,16 +57,16 @@ class Pet(BaseEntity):
     extra_gene_list: list[MorphGeneMapping | None] = Field(default=[], description="List of extra genes")
     morphology_id: str | None = Field(None, description="ID of the pet morphology")
     picture_list: list[Picture | None] = Field(default=[], description="List of pictures")
-    
+
     def change_owner(self, new_owner_id: str) -> None:
         """Change the owner of the pet and emit domain event."""
         if not new_owner_id:
             raise ValueError("Owner ID cannot be empty")
-            
+
         old_owner_id = self.owner_id
         self.owner_id = new_owner_id
         self._update_timestamp()
-        
+
         # Emit domain event
         from domain.pets.events import PetOwnershipChangedEvent
         self._add_domain_event(PetOwnershipChangedEvent(
@@ -74,12 +74,12 @@ class Pet(BaseEntity):
             old_owner_id=old_owner_id,
             new_owner_id=new_owner_id
         ))
-    
+
     def update_morphology(self, morphology_id: str | None) -> None:
         """Update the morphology of the pet and emit domain event."""
         self.morphology_id = morphology_id
         self._update_timestamp()
-        
+
         # Emit domain event
         from domain.pets.events import PetMorphologyUpdatedEvent
         self._add_domain_event(PetMorphologyUpdatedEvent(

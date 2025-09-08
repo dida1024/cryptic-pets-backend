@@ -159,7 +159,7 @@ class MorphologyRepository(BaseRepository[Morphology]):
     async def get_morphologies_containing_gene(self, gene_id: str) -> list[Morphology]:
         """获取包含指定基因的所有形态学"""
         pass
-        
+
     @abstractmethod
     async def is_compatible_with_breed(self, morphology_id: str, breed_id: str) -> bool:
         """检查形态学是否与品种兼容"""
