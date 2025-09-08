@@ -6,6 +6,7 @@ from infrastructure.persistence.postgres.models.morphology import MorphologyMode
 from infrastructure.persistence.postgres.models.morph_gene_mapping import MorphGeneMappingModel
 from infrastructure.persistence.postgres.models.pet import PetModel
 from infrastructure.persistence.postgres.models.picture import PictureModel
+from infrastructure.persistence.postgres.models.pet_record import PetRecordModel
 
 __all__ = [
     "BaseModel",
@@ -15,4 +16,5 @@ __all__ = [
     "MorphologyModel",
     "PetModel",
     "PictureModel",
+    "PetRecordModel",
 ]
