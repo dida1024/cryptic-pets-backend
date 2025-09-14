@@ -33,6 +33,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
     PROJECT_NAME: str
+    SERVER_PORT: int = 8000
     ROOTPATH: str
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = secrets.token_urlsafe(32)

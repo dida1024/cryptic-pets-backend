@@ -4,12 +4,12 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar
+from typing import TypeVar
 
 T = TypeVar('T')
 
 
-class Specification(Generic[T], ABC):
+class Specification[T](ABC):
     """规约基类，定义规约接口"""
 
     @abstractmethod

@@ -7,7 +7,7 @@ from infrastructure.config import settings
 # 异步引擎
 async_engine: AsyncEngine = create_async_engine(
     settings.SQLALCHEMY_DATABASE_URI.replace("postgresql://", "postgresql+asyncpg://"),
-    echo=True,
+    echo=False, # 打印SQL语句
     future=True
 )
 

@@ -10,12 +10,12 @@ class ApiResponse[T](BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     code: int = 200
-    message: str = "操作成功"
+    message: str = "Operation successful"
     data: T | None = None
-    meta: T | None  = None
+    meta: T | None = None
 
     @classmethod
-    def success(cls, data: T = None, message: str = "操作成功", code: int = 200, meta: dict = None) -> "ApiResponse[T]":
+    def success(cls, data: T = None, message: str = "Operation successful", code: int = 200, meta: dict = None) -> "ApiResponse[T]":
         return cls(
             code=code,
             message=message,

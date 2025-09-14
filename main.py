@@ -40,7 +40,7 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     root_path=settings.ROOTPATH,
     generate_unique_id_function=custom_generate_unique_id,
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 app.add_exception_handler(BizException, biz_exception_handler)
@@ -57,3 +57,12 @@ if settings.all_cors_origins:
     )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=settings.SERVER_PORT,
+        reload=True if settings.ENVIRONMENT == "local" else False,
+    )

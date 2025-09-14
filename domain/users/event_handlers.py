@@ -3,7 +3,7 @@
 from loguru import logger
 
 from domain.common.events import DomainEventHandler
-from domain.users.events import UserCreatedEvent
+from domain.users.events import UserCreatedEvent, UserUpdatedEvent
 
 
 class UserCreatedEventHandler(DomainEventHandler):
@@ -17,3 +17,10 @@ class UserCreatedEventHandler(DomainEventHandler):
         # - 创建用户配置文件
         # - 设置默认偏好
         # - 发送到外部系统
+
+class UserUpdatedEventHandler(DomainEventHandler):
+    """Handler for user updated events."""
+
+    async def handle(self, event: UserUpdatedEvent) -> None:
+        """Handle user updated event."""
+        logger.info(f"User {event.user_id} updated fields: {event.updated_fields}")

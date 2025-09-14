@@ -17,16 +17,17 @@ class NotificationEventHandler(DomainEventHandler):
 
     async def handle(self, event) -> None:
         """Handle domain events for notification purposes."""
-        if isinstance(event, PetCreatedEvent):
-            await self._handle_pet_created(event)
-        elif isinstance(event, PetOwnershipChangedEvent):
-            await self._handle_pet_ownership_changed(event)
-        elif isinstance(event, PetMorphologyUpdatedEvent):
-            await self._handle_pet_morphology_updated(event)
-        elif isinstance(event, PetDeletedEvent):
-            await self._handle_pet_deleted(event)
-        elif isinstance(event, UserCreatedEvent):
-            await self._handle_user_created(event)
+        match event:
+            case PetCreatedEvent():
+                await self._handle_pet_created(event)
+            case PetOwnershipChangedEvent():
+                await self._handle_pet_ownership_changed(event)
+            case PetMorphologyUpdatedEvent():
+                await self._handle_pet_morphology_updated(event)
+            case PetDeletedEvent():
+                await self._handle_pet_deleted(event)
+            case UserCreatedEvent():
+                await self._handle_user_created(event)
 
     async def _handle_pet_created(self, event: PetCreatedEvent) -> None:
         """Handle pet created notification."""
@@ -79,12 +80,13 @@ class EmailNotificationHandler(DomainEventHandler):
 
     async def handle(self, event) -> None:
         """Handle domain events for email notifications."""
-        if isinstance(event, PetCreatedEvent):
-            await self._send_pet_created_email(event)
-        elif isinstance(event, PetOwnershipChangedEvent):
-            await self._send_ownership_changed_email(event)
-        elif isinstance(event, UserCreatedEvent):
-            await self._send_welcome_email(event)
+        match event:
+            case PetCreatedEvent():
+                await self._send_pet_created_email(event)
+            case PetOwnershipChangedEvent():
+                await self._send_ownership_changed_email(event)
+            case UserCreatedEvent():
+                await self._send_welcome_email(event)
 
     async def _send_pet_created_email(self, event: PetCreatedEvent) -> None:
         """Send email notification for pet creation."""
@@ -116,10 +118,11 @@ class PushNotificationHandler(DomainEventHandler):
 
     async def handle(self, event) -> None:
         """Handle domain events for push notifications."""
-        if isinstance(event, PetCreatedEvent):
-            await self._send_pet_created_push(event)
-        elif isinstance(event, PetOwnershipChangedEvent):
-            await self._send_ownership_changed_push(event)
+        match event:
+            case PetCreatedEvent():
+                await self._send_pet_created_push(event)
+            case PetOwnershipChangedEvent():
+                await self._send_ownership_changed_push(event)
 
     async def _send_pet_created_push(self, event: PetCreatedEvent) -> None:
         """Send push notification for pet creation."""

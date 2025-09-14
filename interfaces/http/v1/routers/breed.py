@@ -1,5 +1,10 @@
 from fastapi import APIRouter, Depends, Path, Query, status
 
+from application.breeds.command_handlers import (
+    CreateBreedHandler,
+    DeleteBreedHandler,
+    UpdateBreedHandler,
+)
 from application.breeds.commands import (
     CreateBreedCommand,
     DeleteBreedCommand,
@@ -7,8 +12,13 @@ from application.breeds.commands import (
     SearchBreedsQuery,
     UpdateBreedCommand,
 )
-from application.breeds.handlers import BreedService
-from infrastructure.dependencies import get_breed_service
+from application.breeds.query_handlers import BreedQueryService
+from infrastructure.dependencies import (
+    get_breed_query_service,
+    get_create_breed_handler,
+    get_delete_breed_handler,
+    get_update_breed_handler,
+)
 from interfaces.http.base_response import ApiResponse, PaginatedResponse
 from interfaces.http.decorators import handle_exceptions
 from interfaces.http.v1.schemas.breed_schemas import (
@@ -29,10 +39,10 @@ router = APIRouter(prefix="/breeds", tags=["breeds"])
 @handle_exceptions
 async def create_breed(
     request: CreateBreedRequest,
-    breed_service: BreedService = Depends(get_breed_service),
+    create_breed_handler: CreateBreedHandler = Depends(get_create_breed_handler),
 ) -> ApiResponse[BreedResponse]:
     command = CreateBreedCommand(name=request.name, description=request.description)
-    breed = await breed_service.create_breed(command)
+    breed = await create_breed_handler.handle(command)
     return ApiResponse.success(data=BreedResponse.model_validate(breed.model_dump()), message="Breed created successfully")
 
 
@@ -44,10 +54,13 @@ async def create_breed(
 @handle_exceptions
 async def get_breed(
     breed_id: str = Path(..., description="品种ID"),
-    breed_service: BreedService = Depends(get_breed_service),
+    breed_query_service: BreedQueryService = Depends(get_breed_query_service),
 ) -> ApiResponse[BreedResponse]:
-    breed = await breed_service.get_breed_by_id(breed_id)
-    return ApiResponse.success(data=BreedResponse.model_validate(breed.model_dump()))
+    from application.breeds.queries import GetBreedByIdQuery
+
+    query = GetBreedByIdQuery(breed_id=breed_id, include_pets=False)
+    breed_details = await breed_query_service.get_breed_details(query)
+    return ApiResponse.success(data=BreedResponse.model_validate(breed_details.model_dump()))
 
 
 @router.put(
@@ -59,10 +72,10 @@ async def get_breed(
 async def update_breed(
     breed_id: str,
     request: UpdateBreedRequest,
-    breed_service: BreedService = Depends(get_breed_service),
+    update_breed_handler: UpdateBreedHandler = Depends(get_update_breed_handler),
 ) -> ApiResponse[BreedResponse]:
     command = UpdateBreedCommand(breed_id=breed_id, name=request.name, description=request.description)
-    breed = await breed_service.update_breed(command)
+    breed = await update_breed_handler.handle(command)
     return ApiResponse.success(data=BreedResponse.model_validate(breed.model_dump()), message="Breed updated successfully")
 
 
@@ -74,9 +87,10 @@ async def update_breed(
 @handle_exceptions
 async def delete_breed(
     breed_id: str,
-    breed_service: BreedService = Depends(get_breed_service),
+    delete_breed_handler: DeleteBreedHandler = Depends(get_delete_breed_handler),
 ) -> ApiResponse[dict]:
-    success = await breed_service.delete_breed(DeleteBreedCommand(breed_id=breed_id))
+    command = DeleteBreedCommand(breed_id=breed_id)
+    success = await delete_breed_handler.handle(command)
     return ApiResponse.success(data={"deleted": success})
 
 
@@ -90,11 +104,12 @@ async def list_breeds(
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
     include_deleted: bool = Query(False, description="是否包含已删除"),
-    breed_service: BreedService = Depends(get_breed_service),
+    breed_query_service: BreedQueryService = Depends(get_breed_query_service),
 ) -> PaginatedResponse[BreedResponse]:
-    breeds, total = await breed_service.list_all(ListBreedsQuery(page=page, page_size=page_size, include_deleted=include_deleted))
-    items = [BreedResponse.model_validate(b.model_dump()) for b in breeds]
-    return PaginatedResponse.create(items=items, total=total, page=page, page_size=page_size)
+    query = ListBreedsQuery(page=page, page_size=page_size, include_deleted=include_deleted)
+    result = await breed_query_service.list_breeds(query)
+    items = [BreedResponse.model_validate(b.model_dump()) for b in result.breeds]
+    return PaginatedResponse.create(items=items, total=result.total, page=page, page_size=page_size)
 
 
 @router.get(
@@ -109,12 +124,17 @@ async def search_breeds(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
     include_deleted: bool = Query(False),
-    breed_service: BreedService = Depends(get_breed_service),
+    breed_query_service: BreedQueryService = Depends(get_breed_query_service),
 ) -> PaginatedResponse[BreedResponse]:
-    breeds, total = await breed_service.search(
-        SearchBreedsQuery(search=q, language=language, page=page, page_size=page_size, include_deleted=include_deleted)
+    query = SearchBreedsQuery(
+        search_term=q,
+        language=language,
+        page=page,
+        page_size=page_size,
+        include_deleted=include_deleted,
     )
-    items = [BreedResponse.model_validate(b.model_dump()) for b in breeds]
-    return PaginatedResponse.create(items=items, total=total, page=page, page_size=page_size)
+    result = await breed_query_service.search_breeds(query)
+    items = [BreedResponse.model_validate(b.model_dump()) for b in result.breeds]
+    return PaginatedResponse.create(items=items, total=result.total, page=page, page_size=page_size)
 
 

@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, Path, Query, status
-from loguru import logger
 
 from application.pets.command_handlers import (
     CreatePetHandler,

@@ -13,8 +13,8 @@ from domain.pets.events import (
     PetMorphologyUpdatedEvent,
     PetOwnershipChangedEvent,
 )
-from domain.users.event_handlers import UserCreatedEventHandler
-from domain.users.events import UserCreatedEvent
+from domain.users.event_handlers import UserCreatedEventHandler, UserUpdatedEventHandler
+from domain.users.events import UserCreatedEvent, UserUpdatedEvent
 from infrastructure.events.audit_event_handlers import (
     AuditEventHandler,
     PetAuditEventHandler,
@@ -39,6 +39,7 @@ def register_all_event_handlers() -> None:
 
     # 注册用户相关事件处理器
     event_bus.subscribe(UserCreatedEvent, UserCreatedEventHandler())
+    event_bus.subscribe(UserUpdatedEvent, UserUpdatedEventHandler())
 
     # 注册审计事件处理器
     event_bus.subscribe(PetCreatedEvent, AuditEventHandler())
@@ -46,6 +47,7 @@ def register_all_event_handlers() -> None:
     event_bus.subscribe(PetMorphologyUpdatedEvent, AuditEventHandler())
     event_bus.subscribe(PetDeletedEvent, AuditEventHandler())
     event_bus.subscribe(UserCreatedEvent, AuditEventHandler())
+    event_bus.subscribe(UserUpdatedEvent, AuditEventHandler())
 
     # 注册专门的审计处理器
     event_bus.subscribe(PetCreatedEvent, PetAuditEventHandler())
@@ -53,6 +55,7 @@ def register_all_event_handlers() -> None:
     event_bus.subscribe(PetMorphologyUpdatedEvent, PetAuditEventHandler())
     event_bus.subscribe(PetDeletedEvent, PetAuditEventHandler())
     event_bus.subscribe(UserCreatedEvent, UserAuditEventHandler())
+    event_bus.subscribe(UserUpdatedEvent, UserAuditEventHandler())
 
     # 注册通知事件处理器
     event_bus.subscribe(PetCreatedEvent, NotificationEventHandler())
@@ -60,15 +63,19 @@ def register_all_event_handlers() -> None:
     event_bus.subscribe(PetMorphologyUpdatedEvent, NotificationEventHandler())
     event_bus.subscribe(PetDeletedEvent, NotificationEventHandler())
     event_bus.subscribe(UserCreatedEvent, NotificationEventHandler())
+    event_bus.subscribe(UserUpdatedEvent, NotificationEventHandler())
 
     # 注册邮件通知处理器
     event_bus.subscribe(PetCreatedEvent, EmailNotificationHandler())
     event_bus.subscribe(PetOwnershipChangedEvent, EmailNotificationHandler())
     event_bus.subscribe(UserCreatedEvent, EmailNotificationHandler())
+    event_bus.subscribe(UserUpdatedEvent, EmailNotificationHandler())
 
     # 注册推送通知处理器
     event_bus.subscribe(PetCreatedEvent, PushNotificationHandler())
     event_bus.subscribe(PetOwnershipChangedEvent, PushNotificationHandler())
+    event_bus.subscribe(UserCreatedEvent, PushNotificationHandler())
+    event_bus.subscribe(UserUpdatedEvent, PushNotificationHandler())
 
 
 def register_pet_event_handlers() -> None:
@@ -86,3 +93,4 @@ def register_user_event_handlers() -> None:
     event_bus = get_event_bus()
 
     event_bus.subscribe(UserCreatedEvent, UserCreatedEventHandler())
+    event_bus.subscribe(UserUpdatedEvent, UserUpdatedEventHandler())

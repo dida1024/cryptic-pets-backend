@@ -1,6 +1,6 @@
 
 from loguru import logger
-from sqlalchemy import ColumnElement, UnaryExpression, and_, func, or_, select
+from sqlalchemy import ColumnElement, UnaryExpression, and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlmodel import String, cast

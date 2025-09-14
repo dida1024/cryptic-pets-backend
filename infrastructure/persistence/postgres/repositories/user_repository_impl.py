@@ -8,12 +8,16 @@ from domain.users.repository import UserRepository
 from domain.users.value_objects import UserTypeEnum
 from infrastructure.persistence.postgres.mappers.user_mapper import UserMapper
 from infrastructure.persistence.postgres.models.user import UserModel
+from infrastructure.persistence.postgres.repositories.event_aware_repository import (
+    EventAwareRepository,
+)
 
 
-class PostgreSQLUserRepositoryImpl(UserRepository):
+class PostgreSQLUserRepositoryImpl(EventAwareRepository[User], UserRepository):
     """PostgreSQL用户仓储实现"""
 
-    def __init__(self, session: AsyncSession, mapper: UserMapper):
+    def __init__(self, session: AsyncSession, mapper: UserMapper, event_publisher):
+        super().__init__(event_publisher)
         self.session = session
         self.mapper = mapper
         self.logger = logger
@@ -54,7 +58,12 @@ class PostgreSQLUserRepositoryImpl(UserRepository):
         self.session.add(model)
         await self.session.flush()
         await self.session.refresh(model)
-        return self.mapper.to_domain(model)
+
+        # 转换为领域实体并发布事件
+        created_user = self.mapper.to_domain(model)
+        await self._publish_events_from_entity(created_user)
+
+        return created_user
 
     async def update(self, user: User) -> User:
         """更新用户"""
@@ -77,7 +86,12 @@ class PostgreSQLUserRepositoryImpl(UserRepository):
         self.session.add(existing_model)
         await self.session.flush()
         await self.session.refresh(existing_model)
-        return self.mapper.to_domain(existing_model)
+
+        # 转换为领域实体并发布事件
+        updated_user = self.mapper.to_domain(existing_model)
+        await self._publish_events_from_entity(updated_user)
+
+        return updated_user
 
     async def delete(self, user_id: str) -> bool:
         """删除用户（软删除）"""
