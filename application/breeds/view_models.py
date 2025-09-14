@@ -18,6 +18,7 @@ class BreedSummaryView(BaseModel):
     description: I18n | None = None
     created_at: datetime
     updated_at: datetime
+    is_deleted: bool
 
     @classmethod
     def from_entity(cls, breed: Breed) -> "BreedSummaryView":
@@ -28,6 +29,7 @@ class BreedSummaryView(BaseModel):
             description=breed.description,
             created_at=breed.created_at,
             updated_at=breed.updated_at,
+            is_deleted=breed.is_deleted,
         )
 
 
@@ -38,6 +40,7 @@ class BreedDetailsView(BaseModel):
     description: I18n | None = None
     created_at: datetime
     updated_at: datetime
+    is_deleted: bool
     # 可以添加更多详情信息
 
     @classmethod
@@ -49,6 +52,7 @@ class BreedDetailsView(BaseModel):
             description=breed.description,
             created_at=breed.created_at,
             updated_at=breed.updated_at,
+            is_deleted=breed.is_deleted,
         )
 
 

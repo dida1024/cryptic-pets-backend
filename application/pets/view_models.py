@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from domain.common.entities import I18n
 from domain.pets.value_objects import GenderEnum
+from domain.users.value_objects import UserTypeEnum
 
 T = TypeVar('T')
 
@@ -18,7 +19,10 @@ class OwnerView(BaseModel):
 
     id: str
     username: str
+    email: str
     full_name: str | None = None
+    user_type: UserTypeEnum = UserTypeEnum.USER
+    is_active: bool = True
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -100,6 +104,9 @@ class PetDetailsView(BaseModel):
     description: str | None = None
     birth_date: datetime | None = None
     gender: GenderEnum
+    owner_id: str
+    breed_id: str
+    is_deleted: bool
     created_at: datetime
     updated_at: datetime
     owner: OwnerView | None = None

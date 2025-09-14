@@ -5,7 +5,7 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, SerializeAsAny
 
 from domain.pet_records.entities import PetRecord
 from domain.pet_records.pet_record_data import PetRecordData
@@ -40,7 +40,7 @@ class PetRecordDetailsView(BaseModel):
     pet_id: str
     creator_id: str
     event_type: PetEventTypeEnum
-    event_data: PetRecordData
+    event_data: SerializeAsAny[PetRecordData]
     created_at: datetime
     updated_at: datetime
     is_deleted: bool

@@ -1,7 +1,9 @@
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
 
+from domain.pet_records.pet_record_data import PetRecordDataFactory
 from domain.pet_records.value_objects import PetEventTypeEnum
 
 
@@ -12,13 +14,22 @@ class PetRecordBaseSchema(BaseModel):
     event_type: PetEventTypeEnum = Field(..., description="事件类型")
     event_data: dict = Field(..., description="事件数据")
 
-
 class PetRecordResponse(PetRecordBaseSchema):
     """宠物记录响应模型"""
     id: str = Field(..., description="记录ID")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
     is_deleted: bool = Field(..., description="是否删除")
+
+
+class PetRecordSummaryResponse(BaseModel):
+    """宠物记录摘要响应模型（用于列表/搜索）"""
+    id: str = Field(..., description="记录ID")
+    pet_id: str = Field(..., description="宠物ID")
+    creator_id: str = Field(..., description="创建者ID")
+    event_type: PetEventTypeEnum = Field(..., description="事件类型")
+    created_at: datetime = Field(..., description="创建时间")
+    updated_at: datetime = Field(..., description="更新时间")
 
 
 class CreatePetRecordRequest(BaseModel):

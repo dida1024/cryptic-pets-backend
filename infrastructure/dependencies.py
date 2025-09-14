@@ -134,9 +134,10 @@ async def get_morphology_repository(
 async def get_pet_record_repository(
     session: AsyncSession = Depends(get_db_session),
     mapper: PetRecordMapper = Depends(lambda: PetRecordMapper()),
+    event_publisher: EventPublisher = Depends(get_event_publisher),
 ) -> PostgreSQLPetRecordRepositoryImpl:
     """获取宠物事件记录仓储实例"""
-    return PostgreSQLPetRecordRepositoryImpl(session, mapper)
+    return PostgreSQLPetRecordRepositoryImpl(session, mapper, event_publisher)
 
 
 # 用户命令处理器依赖

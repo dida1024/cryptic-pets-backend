@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, status
+from loguru import logger
 
 from application.pet_records.command_handlers import (
     CreatePetRecordHandler,
@@ -34,6 +35,7 @@ from interfaces.http.v1.schemas.pet_record_schemas import (
     CreateSheddingRecordRequest,
     CreateWeighingRecordRequest,
     PetRecordResponse,
+    PetRecordSummaryResponse,
     PetRecordSearchRequest,
     UpdatePetRecordRequest,
 )
@@ -350,6 +352,8 @@ async def get_pet_record(
     """获取宠物记录详情"""
     query = GetPetRecordByIdQuery(pet_record_id=record_id)
     record_details = await query_service.get_pet_record_details(query)
+    logger.info(f"Record details: {record_details}")
+    logger.info(f"Record details.model_dump(): {record_details.model_dump()}")
     return ApiResponse.success(
         data=PetRecordResponse.model_validate(record_details.model_dump()),
         message="Pet record retrieved successfully",
@@ -408,7 +412,7 @@ async def delete_pet_record(
 
 @router.get(
     "",
-    response_model=PaginatedResponse[PetRecordResponse],
+    response_model=PaginatedResponse[PetRecordSummaryResponse],
     summary="获取宠物记录列表",
     description="获取宠物记录列表，支持分页和筛选",
 )
@@ -422,7 +426,7 @@ async def list_pet_records(
     creator_id: str | None = None,
     include_deleted: bool = False,
     query_service: PetRecordQueryService = Depends(get_pet_record_query_service),
-) -> PaginatedResponse[PetRecordResponse]:
+) -> PaginatedResponse[PetRecordSummaryResponse]:
     """获取宠物记录列表"""
     query = ListPetRecordsQuery(
         page=page,
@@ -437,7 +441,7 @@ async def list_pet_records(
 
     # 转换为响应格式
     records = [
-        PetRecordResponse.model_validate(record.model_dump())
+        PetRecordSummaryResponse.model_validate(record.model_dump())
         for record in result.records
     ]
 
@@ -451,7 +455,7 @@ async def list_pet_records(
 
 @router.post(
     "/search",
-    response_model=PaginatedResponse[PetRecordResponse],
+    response_model=PaginatedResponse[PetRecordSummaryResponse],
     summary="搜索宠物记录",
     description="根据条件搜索宠物记录",
 )
@@ -459,7 +463,7 @@ async def list_pet_records(
 async def search_pet_records(
     request: PetRecordSearchRequest,
     query_service: PetRecordQueryService = Depends(get_pet_record_query_service),
-) -> PaginatedResponse[PetRecordResponse]:
+) -> PaginatedResponse[PetRecordSummaryResponse]:
     """搜索宠物记录"""
     query = SearchPetRecordsQuery(
         search_term=request.search_term,
@@ -474,7 +478,7 @@ async def search_pet_records(
 
     # 转换为响应格式
     records = [
-        PetRecordResponse.model_validate(record.model_dump())
+        PetRecordSummaryResponse.model_validate(record.model_dump())
         for record in result.records
     ]
 
@@ -488,7 +492,7 @@ async def search_pet_records(
 
 @router.get(
     "/pet/{pet_id}",
-    response_model=ApiResponse[list[PetRecordResponse]],
+    response_model=ApiResponse[list[PetRecordSummaryResponse]],
     summary="获取宠物的所有记录",
     description="根据宠物ID获取该宠物的所有记录",
 )
@@ -496,11 +500,11 @@ async def search_pet_records(
 async def get_pet_records_by_pet_id(
     pet_id: str,
     query_service: PetRecordQueryService = Depends(get_pet_record_query_service),
-) -> ApiResponse[list[PetRecordResponse]]:
+) -> ApiResponse[list[PetRecordSummaryResponse]]:
     """获取宠物的所有记录"""
     records = await query_service.get_pet_records_by_pet_id(pet_id)
     record_responses = [
-        PetRecordResponse.model_validate(record.model_dump()) for record in records
+        PetRecordSummaryResponse.model_validate(record.model_dump()) for record in records
     ]
     return ApiResponse.success(
         data=record_responses,
@@ -510,7 +514,7 @@ async def get_pet_records_by_pet_id(
 
 @router.get(
     "/creator/{creator_id}",
-    response_model=ApiResponse[list[PetRecordResponse]],
+    response_model=ApiResponse[list[PetRecordSummaryResponse]],
     summary="获取创建者的所有记录",
     description="根据创建者ID获取该用户创建的所有记录",
 )
@@ -518,11 +522,11 @@ async def get_pet_records_by_pet_id(
 async def get_pet_records_by_creator_id(
     creator_id: str,
     query_service: PetRecordQueryService = Depends(get_pet_record_query_service),
-) -> ApiResponse[list[PetRecordResponse]]:
+) -> ApiResponse[list[PetRecordSummaryResponse]]:
     """获取创建者的所有记录"""
     records = await query_service.get_pet_records_by_creator_id(creator_id)
     record_responses = [
-        PetRecordResponse.model_validate(record.model_dump()) for record in records
+        PetRecordSummaryResponse.model_validate(record.model_dump()) for record in records
     ]
     return ApiResponse.success(
         data=record_responses,

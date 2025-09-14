@@ -1,5 +1,6 @@
 from typing import TypeVar
 
+from loguru import logger
 from pydantic import BaseModel
 
 from domain.pet_records.value_objects import PetEventTypeEnum
@@ -150,5 +151,6 @@ class PetRecordDataFactory:
         Returns:
             解析后的数据实例
         """
+        logger.info(f"Parsing data for event type: {event_type}")
         data_class = cls.get_data_class(event_type)
         return data_class.model_validate(data)

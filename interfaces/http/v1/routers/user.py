@@ -29,7 +29,11 @@ from infrastructure.dependencies import (
 )
 from interfaces.http.base_response import ApiResponse, PaginatedResponse
 from interfaces.http.decorators import handle_exceptions
-from interfaces.http.v1.schemas.pet_schemas import CreatePetRequest, PetResponse
+from interfaces.http.v1.schemas.pet_schemas import (
+    CreatePetRequest,
+    PetResponse,
+    PetSummaryResponse,
+)
 from interfaces.http.v1.schemas.user_schemas import (
     CreateUserRequest,
     PasswordUpdateRequest,
@@ -246,14 +250,14 @@ async def create_user_pet(
     return ApiResponse.success(data=pet_response, message="Pet created successfully")
 
 
-@router.get("/{user_id}/pets", response_model=PaginatedResponse[PetResponse])
+@router.get("/{user_id}/pets", response_model=PaginatedResponse[PetSummaryResponse])
 async def get_user_pets(
     user_id: str,
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
     search: str = Query(None, description="搜索关键字（宠物名）"),
     pet_query_service: PetQueryService = Depends(get_pet_query_service),
-) -> PaginatedResponse[PetResponse]:
+) -> PaginatedResponse[PetSummaryResponse]:
     """获取用户宠物列表"""
     from application.pets.queries import SearchPetsQuery
 
@@ -262,7 +266,7 @@ async def get_user_pets(
     )
     result = await pet_query_service.search_pets(query)
 
-    pet_responses = [PetResponse.model_validate(pet.model_dump()) for pet in result.pets]
+    pet_responses = [PetSummaryResponse.model_validate(pet.model_dump()) for pet in result.pets]
     return PaginatedResponse.create(
         items=pet_responses,
         total=result.total_count,

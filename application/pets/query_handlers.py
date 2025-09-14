@@ -56,6 +56,9 @@ class PetQueryService:
             description=pet.description,
             birth_date=pet.birth_date,
             gender=pet.gender,
+            owner_id=pet.owner_id,
+            breed_id=pet.breed_id,
+            is_deleted=pet.is_deleted,
             created_at=pet.created_at,
             updated_at=pet.updated_at,
         )
@@ -67,7 +70,10 @@ class PetQueryService:
                 pet_view.owner = OwnerView(
                     id=owner.id,
                     username=owner.username,
+                    email=owner.email,
                     full_name=owner.full_name,
+                    user_type=owner.user_type,
+                    is_active=owner.is_active,
                 )
 
         # 加载品种信息（如果请求）
