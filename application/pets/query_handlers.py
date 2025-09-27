@@ -140,7 +140,7 @@ class PetQueryService:
             if pet.breed_id:
                 breed = await self.breed_repository.get_by_id(pet.breed_id)
                 if breed and breed.name:
-                    # 尝试获取当前语言的名称，默认为英语
+                    # 直接使用I18n对象
                     breed_name = breed.name
 
             # 创建摘要视图
@@ -188,8 +188,8 @@ class PetQueryService:
             if pet.breed_id:
                 breed = await self.breed_repository.get_by_id(pet.breed_id)
                 if breed and breed.name:
-                    # 尝试获取当前语言的名称，默认为英语
-                    breed_name = breed.name.get("en", "")
+                    # 使用I18n的get_text方法获取当前语言的名称，默认为英语
+                    breed_name = breed.name
 
             # 创建摘要视图
             pet_view = PetSummaryView(
@@ -290,8 +290,8 @@ class PetQueryService:
             if pet.breed_id:
                 breed = await self.breed_repository.get_by_id(pet.breed_id)
                 if breed and breed.name:
-                    # 尝试获取当前语言的名称，默认为英语
-                    breed_name = breed.name.get("en", "")
+                    # 使用I18n的get_text方法获取当前语言的名称，默认为英语
+                    breed_name = breed.name
 
             # 创建摘要视图
             pet_view = PetSummaryView(

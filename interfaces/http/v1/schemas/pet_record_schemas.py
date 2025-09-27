@@ -1,9 +1,7 @@
 from datetime import datetime
-from typing import Any
 
 from pydantic import BaseModel, Field
 
-from domain.pet_records.pet_record_data import PetRecordDataFactory
 from domain.pet_records.value_objects import PetEventTypeEnum
 
 

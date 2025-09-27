@@ -35,8 +35,8 @@ from interfaces.http.v1.schemas.pet_record_schemas import (
     CreateSheddingRecordRequest,
     CreateWeighingRecordRequest,
     PetRecordResponse,
-    PetRecordSummaryResponse,
     PetRecordSearchRequest,
+    PetRecordSummaryResponse,
     UpdatePetRecordRequest,
 )
 
