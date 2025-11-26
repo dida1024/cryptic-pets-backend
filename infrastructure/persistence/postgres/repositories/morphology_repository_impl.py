@@ -91,9 +91,10 @@ class PostgreSQLMorphologyRepositoryImpl(MorphologyRepository):
                 f"Failed to update morphology: {e}", "update"
             )
 
-    async def delete(self, entity_id: str) -> bool:
+    async def delete(self, entity: Morphology | str) -> bool:
         """删除形态学（软删除）"""
         try:
+            entity_id = entity.id if isinstance(entity, Morphology) else entity
             model = await self.session.get(MorphologyModel, entity_id)
             if model is None or model.is_deleted:
                 return False

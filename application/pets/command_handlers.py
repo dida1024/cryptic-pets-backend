@@ -3,6 +3,8 @@
 实现CQRS模式的命令部分，处理写操作
 """
 
+from uuid import uuid4
+
 from loguru import logger
 
 from application.pets.commands import (
@@ -79,20 +81,20 @@ class CreatePetHandler:
                 birth_date=command.birth_date,
                 gender=command.gender,
             )
+            if not pet.id:
+                pet.id = str(uuid4())
             self.logger.info(f"Creating pet: {pet}")
-
-            # 保存宠物
-            created_pet = await self.pet_repository.create(pet)
 
             # 添加领域事件
             from domain.pets.events import PetCreatedEvent
-            created_pet._add_domain_event(PetCreatedEvent(
-                pet_id=created_pet.id,
-                owner_id=created_pet.owner_id,
-                breed_id=created_pet.breed_id
+            pet._add_domain_event(PetCreatedEvent(
+                pet_id=pet.id,
+                owner_id=pet.owner_id,
+                breed_id=pet.breed_id
             ))
 
-            return created_pet
+            # 保存宠物（仓储负责发布领域事件）
+            return await self.pet_repository.create(pet)
 
 
 class TransferPetOwnershipHandler:
@@ -184,8 +186,8 @@ class UpdatePetHandler:
             pet.gender = command.gender
         if command.morphology_id is not None and self.pet_domain_service:
             # 如果有领域服务，使用领域服务更新形态学（包含兼容性验证）
-            await self.pet_domain_service.update_pet_morphology(
-                pet_id=pet.id,
+            pet = await self.pet_domain_service.update_pet_morphology(
+                pet=pet,
                 morphology_id=command.morphology_id,
                 current_user_id=command.owner_id or pet.owner_id,
             )
@@ -193,10 +195,8 @@ class UpdatePetHandler:
             # 如果没有领域服务，直接更新形态学
             pet.update_morphology(command.morphology_id)
 
-        # 更新时间戳
         pet._update_timestamp()
 
-        # 保存更新
         return await self.pet_repository.update(pet)
 
 
@@ -214,5 +214,13 @@ class DeletePetHandler:
         if not pet:
             raise PetNotFoundError(command.pet_id)
 
-        # 执行软删除
-        return await self.pet_repository.delete(command.pet_id)
+        # 软删除并添加领域事件
+        pet.mark_as_deleted()
+        from domain.pets.events import PetDeletedEvent
+        pet._add_domain_event(PetDeletedEvent(
+            pet_id=pet.id,
+            owner_id=pet.owner_id,
+        ))
+
+        # 执行软删除，由仓储负责发布事件
+        return await self.pet_repository.delete(pet)

@@ -24,7 +24,7 @@ class PetRecordRepository(BaseRepository[PetRecord]):
         pass
 
     @abstractmethod
-    async def delete(self, record_id: str) -> bool:
+    async def delete(self, record: PetRecord | str) -> bool:
         """删除记录（软删除）"""
         pass
 

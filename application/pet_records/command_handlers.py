@@ -44,6 +44,14 @@ class CreatePetRecordHandler:
             )
 
             # 保存到数据库
+            # 添加领域事件
+            from domain.pet_records.events import PetRecordCreatedEvent
+            pet_record._add_domain_event(PetRecordCreatedEvent(
+                record_id=pet_record.id,
+                pet_id=pet_record.pet_id,
+                event_type=pet_record.event_type,
+            ))
+
             created_record = await self.pet_record_repository.create(pet_record)
 
             self.logger.info(f"Created pet record {created_record.id} for pet {command.pet_id}")
@@ -78,6 +86,13 @@ class UpdatePetRecordHandler:
                 )
                 existing_record.event_data = event_data
 
+            from domain.pet_records.events import PetRecordUpdatedEvent
+            existing_record._add_domain_event(PetRecordUpdatedEvent(
+                record_id=existing_record.id,
+                pet_id=existing_record.pet_id,
+                event_type=existing_record.event_type,
+            ))
+
             # 保存更新
             updated_record = await self.pet_record_repository.update(existing_record)
 
@@ -106,10 +121,15 @@ class DeletePetRecordHandler:
             if not existing_record:
                 raise PetRecordNotFoundError(command.record_id)
 
-            # 执行软删除
-            success = await self.pet_record_repository.delete(command.record_id)
+            existing_record.mark_as_deleted()
+            from domain.pet_records.events import PetRecordDeletedEvent
+            existing_record._add_domain_event(PetRecordDeletedEvent(
+                record_id=existing_record.id,
+                pet_id=existing_record.pet_id,
+                event_type=existing_record.event_type,
+            ))
 
-            if success:
+            if success := await self.pet_record_repository.delete(existing_record):
                 self.logger.info(f"Deleted pet record {command.record_id}")
             else:
                 self.logger.warning(f"Failed to delete pet record {command.record_id}")

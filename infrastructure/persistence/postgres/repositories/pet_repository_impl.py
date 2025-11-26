@@ -62,10 +62,11 @@ class PostgreSQLPetRepositoryImpl(EventAwareRepository[Pet], PetRepository):
             await self.session.flush()
             await self.session.refresh(model, attribute_names=['breed', 'morphology', 'extra_gene_list', 'owner'])
 
-            # 转换为领域实体并发布事件
-            created_pet = self.mapper.to_domain(model)
-            await self._publish_events_from_entity(created_pet)
+            # 发布聚合上的领域事件
+            await self._publish_events_from_entity(entity)
 
+            # 转换为领域实体返回
+            created_pet = self.mapper.to_domain(model)
             return created_pet
 
         except Exception as e:
@@ -92,10 +93,11 @@ class PostgreSQLPetRepositoryImpl(EventAwareRepository[Pet], PetRepository):
             await self.session.flush()
             await self.session.refresh(existing_model)
 
-            # 转换为领域实体并发布事件
-            updated_pet = self.mapper.to_domain(existing_model)
-            await self._publish_events_from_entity(updated_pet)
+            # 发布聚合上的领域事件
+            await self._publish_events_from_entity(entity)
 
+            # 转换为领域实体返回
+            updated_pet = self.mapper.to_domain(existing_model)
             return updated_pet
 
         except PetNotFoundError:
@@ -104,18 +106,23 @@ class PostgreSQLPetRepositoryImpl(EventAwareRepository[Pet], PetRepository):
             self.logger.error(f"Failed to update pet {entity.id}: {e}")
             raise PetRepositoryError(f"Failed to update pet: {e}", "update")
 
-    async def delete(self, entity_id: str) -> bool:
+    async def delete(self, entity: Pet | str) -> bool:
         """删除宠物（软删除）"""
         try:
+            pet_entity: Pet | None = entity if isinstance(entity, Pet) else None
+            entity_id = entity.id if isinstance(entity, Pet) else entity
+
             model = await self.session.get(PetModel, entity_id)
             if model is None or model.is_deleted:
                 return False
 
-            # 先获取实体以发布删除事件
-            pet_entity = self.mapper.to_domain(model)
-
+            # 软删除
             model.is_deleted = True
             await self.session.flush()
+
+            # 确保有领域实体用于发布事件
+            if pet_entity is None:
+                pet_entity = self.mapper.to_domain(model)
 
             # 发布删除事件
             await self._publish_events_from_entity(pet_entity)

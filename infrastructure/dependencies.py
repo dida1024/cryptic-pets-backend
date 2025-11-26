@@ -116,9 +116,10 @@ async def get_pet_repository(
 async def get_breed_repository(
     session: AsyncSession = Depends(get_db_session),
     mapper: BreedMapper = Depends(lambda: BreedMapper()),
+    event_publisher: EventPublisher = Depends(get_event_publisher),
 ) -> PostgreSQLBreedRepositoryImpl:
     """获取品种仓储实例"""
-    return PostgreSQLBreedRepositoryImpl(session, mapper)
+    return PostgreSQLBreedRepositoryImpl(session, mapper, event_publisher)
 
 
 async def get_morphology_repository(

@@ -3,17 +3,22 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import String, cast
 
+from domain.common.event_publisher import EventPublisher
 from domain.pets.entities import Breed
 from domain.pets.exceptions import BreedNotFoundError, BreedRepositoryError
 from domain.pets.repository import BreedRepository
 from infrastructure.persistence.postgres.mappers.breed_mapper import BreedMapper
 from infrastructure.persistence.postgres.models.breed import BreedModel
+from infrastructure.persistence.postgres.repositories.event_aware_repository import (
+    EventAwareRepository,
+)
 
 
-class PostgreSQLBreedRepositoryImpl(BreedRepository):
+class PostgreSQLBreedRepositoryImpl(EventAwareRepository[Breed], BreedRepository):
     """品种Repository的PostgreSQL实现"""
 
-    def __init__(self, session: AsyncSession, mapper: BreedMapper):
+    def __init__(self, session: AsyncSession, mapper: BreedMapper, event_publisher: EventPublisher):
+        super().__init__(event_publisher)
         self.session = session
         self.mapper = mapper
         self.logger = logger
@@ -45,6 +50,9 @@ class PostgreSQLBreedRepositoryImpl(BreedRepository):
             self.session.add(model)
             await self.session.flush()
             await self.session.refresh(model)
+
+            await self._publish_events_from_entity(entity)
+
             return self.mapper.to_domain(model)
         except Exception as e:
             self.logger.error(f"Failed to create breed {entity.id}: {e}")
@@ -68,6 +76,8 @@ class PostgreSQLBreedRepositoryImpl(BreedRepository):
             await self.session.flush()
             await self.session.refresh(existing_model)
 
+            await self._publish_events_from_entity(entity)
+
             return self.mapper.to_domain(existing_model)
 
         except BreedNotFoundError:
@@ -76,15 +86,21 @@ class PostgreSQLBreedRepositoryImpl(BreedRepository):
             self.logger.error(f"Failed to update breed {entity.id}: {e}")
             raise BreedRepositoryError(f"Failed to update breed: {e}", "update")
 
-    async def delete(self, entity_id: str) -> bool:
+    async def delete(self, entity: Breed | str) -> bool:
         """删除品种（软删除）"""
         try:
+            breed_entity: Breed | None = entity if isinstance(entity, Breed) else None
+            entity_id = entity.id if isinstance(entity, Breed) else entity
             model = await self.session.get(BreedModel, entity_id)
             if model is None or model.is_deleted:
                 return False
 
             model.is_deleted = True
             await self.session.flush()
+
+            if breed_entity is None:
+                breed_entity = self.mapper.to_domain(model)
+            await self._publish_events_from_entity(breed_entity)
 
             return True
 

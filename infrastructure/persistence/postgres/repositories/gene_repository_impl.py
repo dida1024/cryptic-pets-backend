@@ -80,9 +80,10 @@ class PostgreSQLGeneRepositoryImpl(GeneRepository):
             self.logger.error(f"Failed to update gene {entity.id}: {e}")
             raise GeneRepositoryError(f"Failed to update gene: {e}", "update")
 
-    async def delete(self, entity_id: str) -> bool:
+    async def delete(self, entity: Gene | str) -> bool:
         """删除基因（软删除）"""
         try:
+            entity_id = entity.id if isinstance(entity, Gene) else entity
             model = await self.session.get(GeneModel, entity_id)
             if model is None or model.is_deleted:
                 return False

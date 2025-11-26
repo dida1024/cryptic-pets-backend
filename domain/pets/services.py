@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from typing import Protocol
+from uuid import uuid4
 
 from domain.pets.entities import Pet
 from domain.pets.events import (
@@ -144,18 +145,20 @@ class PetDomainService:
             morphology_id=pet_data.morphology_id,
             extra_gene_list=pet_data.extra_gene_list,
         )
+        if not pet.id:
+            pet.id = str(uuid4())
 
-        # Add domain event
-        created_pet = await self.pet_repository.create(pet)
-        created_pet._add_domain_event(
+        # Add domain event before persistence so repository can publish it
+        pet._add_domain_event(
             PetCreatedEvent(
-                pet_id=created_pet.id,
-                owner_id=created_pet.owner_id,
-                breed_id=created_pet.breed_id,
+                pet_id=pet.id,
+                owner_id=pet.owner_id,
+                breed_id=pet.breed_id,
             )
         )
 
-        return created_pet
+        # Persist and let the repository publish queued events
+        return await self.pet_repository.create(pet)
 
     async def transfer_pet_ownership(
         self,
@@ -191,16 +194,16 @@ class PetDomainService:
 
     async def update_pet_morphology(
         self,
-        pet_id: str,
+        pet: Pet,
         morphology_id: str | None,
         current_user_id: str,
     ) -> Pet:
         """Update pet morphology with validation."""
 
         # Get pet
-        pet = await self.pet_repository.get_by_id(pet_id)
-        if not pet:
-            raise PetNotFoundError(f"Pet with ID {pet_id} not found")
+        # pet = await self.pet_repository.get_by_id(pet_id)
+        # if not pet:
+        #     raise PetNotFoundError(f"Pet with ID {pet_id} not found")
 
         # Validate current user is the owner
         if pet.owner_id != current_user_id:
@@ -224,6 +227,7 @@ class PetDomainService:
 
         # Execute the update using the domain entity method
         pet.update_morphology(morphology_id)
+        return pet
 
         # Save and return
-        return await self.pet_repository.update(pet)
+        # return await self.pet_repository.update(pet)

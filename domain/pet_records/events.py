@@ -1,38 +1,30 @@
-"""Domain events for the users domain."""
+"""Domain events for the pet records domain."""
 
 from pydantic import Field
 
 from domain.common.events import DomainEvent
+from domain.pet_records.value_objects import PetEventTypeEnum
 
 
 class PetRecordCreatedEvent(DomainEvent):
-    """Event raised when a new user is created."""
+    """Event raised when a new pet record is created."""
 
+    record_id: str = Field(...)
     pet_id: str = Field(...)
-    record_type: str = Field(...)
-    record_data: dict = Field(...)
+    event_type: PetEventTypeEnum = Field(...)
 
 
 class PetRecordUpdatedEvent(DomainEvent):
-    """Event raised when pet record information is updated."""
+    """Event raised when a pet record is updated."""
 
+    record_id: str = Field(...)
     pet_id: str = Field(...)
-    record_type: str = Field(...)
-    record_data: dict = Field(...)
-    updated_fields: list[str] = Field(...)
+    event_type: PetEventTypeEnum = Field(...)
 
 
 class PetRecordDeletedEvent(DomainEvent):
     """Event raised when a pet record is deleted."""
 
-    user_id: str = Field(...)
-    record_type: str = Field(...)
-    record_data: dict = Field(...)
-
-
-class PetRecordPasswordChangedEvent(DomainEvent):
-    """Event raised when user password is changed."""
-
+    record_id: str = Field(...)
     pet_id: str = Field(...)
-    record_type: str = Field(...)
-    record_data: dict = Field(...)
+    event_type: PetEventTypeEnum = Field(...)

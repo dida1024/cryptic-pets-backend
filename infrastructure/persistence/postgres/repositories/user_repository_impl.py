@@ -59,10 +59,11 @@ class PostgreSQLUserRepositoryImpl(EventAwareRepository[User], UserRepository):
         await self.session.flush()
         await self.session.refresh(model)
 
-        # 转换为领域实体并发布事件
-        created_user = self.mapper.to_domain(model)
-        await self._publish_events_from_entity(created_user)
+        # 发布聚合上的领域事件
+        await self._publish_events_from_entity(user)
 
+        # 转换为领域实体返回
+        created_user = self.mapper.to_domain(model)
         return created_user
 
     async def update(self, user: User) -> User:
@@ -87,14 +88,18 @@ class PostgreSQLUserRepositoryImpl(EventAwareRepository[User], UserRepository):
         await self.session.flush()
         await self.session.refresh(existing_model)
 
-        # 转换为领域实体并发布事件
-        updated_user = self.mapper.to_domain(existing_model)
-        await self._publish_events_from_entity(updated_user)
+        # 发布聚合上的领域事件
+        await self._publish_events_from_entity(user)
 
+        # 转换为领域实体返回
+        updated_user = self.mapper.to_domain(existing_model)
         return updated_user
 
-    async def delete(self, user_id: str) -> bool:
+    async def delete(self, user: User | str) -> bool:
         """删除用户（软删除）"""
+        user_entity: User | None = user if isinstance(user, User) else None
+        user_id = user.id if isinstance(user, User) else user
+
         statement = select(UserModel).where(
             UserModel.id == user_id,
             UserModel.is_deleted.is_(False),
@@ -107,6 +112,11 @@ class PostgreSQLUserRepositoryImpl(EventAwareRepository[User], UserRepository):
         model.is_deleted = True
         self.session.add(model)
         await self.session.flush()
+
+        if user_entity is None:
+            user_entity = self.mapper.to_domain(model)
+        await self._publish_events_from_entity(user_entity)
+
         return True
 
     async def list_all(

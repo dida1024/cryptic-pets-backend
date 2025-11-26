@@ -65,11 +65,9 @@ class PostgreSQLPetRecordRepositoryImpl(
             await self.session.flush()
             await self.session.refresh(model, attribute_names=["pet", "creator"])
 
-            # 转换为领域实体并发布事件
-            created_record = self.mapper.to_domain(model)
-            await self._publish_events_from_entity(created_record)
-
-            return created_record
+            # 发布领域事件并返回原实体
+            await self._publish_events_from_entity(pet_record)
+            return pet_record
 
         except Exception as e:
             self.logger.error(f"Failed to create pet record {pet_record.id}: {e}")
@@ -92,11 +90,8 @@ class PostgreSQLPetRecordRepositoryImpl(
             await self.session.flush()
             await self.session.refresh(existing_model)
 
-            # 转换为领域实体并发布事件
-            updated_record = self.mapper.to_domain(existing_model)
-            await self._publish_events_from_entity(updated_record)
-
-            return updated_record
+            await self._publish_events_from_entity(pet_record)
+            return pet_record
 
         except PetRecordNotFoundError:
             raise
@@ -104,15 +99,18 @@ class PostgreSQLPetRecordRepositoryImpl(
             self.logger.error(f"Failed to update pet record {pet_record.id}: {e}")
             raise PetRecordDomainError(f"Failed to update pet record: {e}")
 
-    async def delete(self, record_id: str) -> bool:
+    async def delete(self, record: PetRecord | str) -> bool:
         """删除宠物记录（软删除）"""
         try:
+            record_entity: PetRecord | None = record if isinstance(record, PetRecord) else None
+            record_id = record.id if isinstance(record, PetRecord) else record
+
             model = await self.session.get(PetRecordModel, record_id)
             if model is None or model.is_deleted:
                 return False
 
-            # 先获取实体以发布删除事件
-            record_entity = self.mapper.to_domain(model)
+            if record_entity is None:
+                record_entity = self.mapper.to_domain(model)
 
             model.is_deleted = True
             await self.session.flush()

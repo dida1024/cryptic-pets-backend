@@ -3,6 +3,8 @@
 实现CQRS模式的命令部分，处理写操作
 """
 
+from uuid import uuid4
+
 from loguru import logger
 from passlib.context import CryptContext
 
@@ -53,21 +55,21 @@ class CreateUserHandler:
             user_type=command.user_type,
             is_active=command.is_active,
         )
+        if not user.id:
+            user.id = str(uuid4())
 
         self.logger.info(f"Creating user: {user.username}")
 
-        # 保存用户
-        created_user = await self.user_repository.create(user)
-
-        # 添加领域事件
+        # 添加领域事件（在持久化之前，以便仓储统一发布）
         from domain.users.events import UserCreatedEvent
-        created_user._add_domain_event(UserCreatedEvent(
-            user_id=created_user.id,
-            username=created_user.username,
-            email=created_user.email,
+        user._add_domain_event(UserCreatedEvent(
+            user_id=user.id,
+            username=user.username,
+            email=user.email,
         ))
 
-        return created_user
+        # 保存用户（仓储负责发布领域事件）
+        return await self.user_repository.create(user)
 
 
 class UpdateUserHandler:
@@ -115,16 +117,13 @@ class UpdateUserHandler:
 
         self.logger.info(f"Updating user: {user.username}")
 
-        updated_user = await self.user_repository.update(user)
-
         from domain.users.events import UserUpdatedEvent
-        self.logger.info(f"Adding domain event for user: {updated_user.id}")
-        updated_user._add_domain_event(UserUpdatedEvent(
-            user_id=updated_user.id,
+        user._add_domain_event(UserUpdatedEvent(
+            user_id=user.id,
             updated_fields=updated_fields,
         ))
 
-        return updated_user
+        return await self.user_repository.update(user)
 
 
 class UpdatePasswordHandler:
@@ -160,16 +159,12 @@ class UpdatePasswordHandler:
 
         self.logger.info(f"Updating password for user: {user.username}")
 
-        # 保存更新
-        updated_user = await self.user_repository.update(user)
-
-        # 添加领域事件
         from domain.users.events import UserPasswordChangedEvent
-        updated_user._add_domain_event(UserPasswordChangedEvent(
-            user_id=updated_user.id,
+        user._add_domain_event(UserPasswordChangedEvent(
+            user_id=user.id,
         ))
 
-        return updated_user
+        return await self.user_repository.update(user)
 
 
 class DeleteUserHandler:
@@ -188,14 +183,13 @@ class DeleteUserHandler:
 
         self.logger.info(f"Deleting user: {user.username}")
 
-        # 执行软删除
-        result = await self.user_repository.delete(command.user_id)
-
-        # 添加领域事件
+        # 软删除并挂载领域事件
+        user.mark_as_deleted()
         from domain.users.events import UserDeletedEvent
         user._add_domain_event(UserDeletedEvent(
             user_id=user.id,
             username=user.username,
         ))
 
-        return result
+        # 仓储负责执行软删除并发布领域事件
+        return await self.user_repository.delete(user)

@@ -23,8 +23,8 @@ class BaseRepository[T](ABC):
         pass
 
     @abstractmethod
-    async def delete(self, entity_id: str) -> bool:
-        """删除实体（软删除）"""
+    async def delete(self, entity: T | str) -> bool:
+        """删除实体（软删除）。可以直接传递实体或实体ID。"""
         pass
 
     @abstractmethod
