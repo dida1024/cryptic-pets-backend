@@ -23,7 +23,7 @@ class PetBaseSchema(BaseModel):
     description: str | None = Field(None, max_length=100, description="宠物描述")
     gender: GenderEnum = Field(default=GenderEnum.UNKNOWN, description="宠物性别")
     birth_date: datetime | None = Field(None, description="宠物出生日期")
-    morphology_id: str | None = Field(None, description="宠物形态学ID")
+    morphology_id: str | None = Field(None, description="宠物品系ID")
 
 class PetResponse(PetBaseSchema):
     """宠物响应"""
@@ -40,7 +40,7 @@ class CreatePetRequest(BaseModel):
     birth_date: datetime | None = Field(None, description="宠物出生日期")
     gender: GenderEnum = Field(default=GenderEnum.UNKNOWN, description="宠物性别")
     description: str | None = Field(None, max_length=100, description="宠物描述")
-    morphology_id: str | None = Field(None, description="宠物形态学ID")
+    morphology_id: str | None = Field(None, description="宠物品系ID")
     extra_gene_list: list | None = Field(None, description="额外基因列表")
 
 class UpdatePetRequest(BaseModel):
@@ -51,7 +51,7 @@ class UpdatePetRequest(BaseModel):
     birth_date: datetime | None = Field(None, description="宠物出生日期")
     gender: GenderEnum | None = Field(None, description="宠物性别")
     description: str | None = Field(None, max_length=100, description="宠物描述")
-    morphology_id: str | None = Field(None, description="宠物形态学ID")
+    morphology_id: str | None = Field(None, description="宠物品系ID")
 
 
 class TransferPetOwnershipRequest(BaseModel):

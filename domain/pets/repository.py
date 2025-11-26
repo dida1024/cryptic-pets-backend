@@ -20,7 +20,7 @@ class PetRepository(BaseRepository[Pet]):
 
     @abstractmethod
     async def get_by_morphology_id(self, morphology_id: str) -> list[Pet]:
-        """根据形态学ID获取宠物列表"""
+        """根据品系ID获取宠物列表"""
         pass
 
     @abstractmethod
@@ -51,7 +51,7 @@ class PetRepository(BaseRepository[Pet]):
             search_term: 搜索关键词
             owner_id: 可选的主人ID过滤
             breed_id: 可选的品种ID过滤
-            morphology_id: 可选的形态学ID过滤
+            morphology_id: 可选的品系ID过滤
             page: 页码，从1开始
             page_size: 每页大小
             include_deleted: 是否包含已删除的记录
@@ -143,26 +143,26 @@ class GeneRepository(BaseRepository[Gene]):
 
 
 class MorphologyRepository(BaseRepository[Morphology]):
-    """形态学聚合Repository接口"""
+    """品系聚合Repository接口"""
 
     @abstractmethod
     async def get_by_gene_combination(self, gene_ids: list[str]) -> list[Morphology]:
-        """根据基因组合获取形态学列表"""
+        """根据基因组合获取品系列表"""
         pass
 
     @abstractmethod
     async def get_by_required_genes(self, gene_ids: list[str]) -> list[Morphology]:
-        """根据必需基因获取形态学列表"""
+        """根据必需基因获取品系列表"""
         pass
 
     @abstractmethod
     async def get_morphologies_containing_gene(self, gene_id: str) -> list[Morphology]:
-        """获取包含指定基因的所有形态学"""
+        """获取包含指定基因的所有品系"""
         pass
 
     @abstractmethod
     async def is_compatible_with_breed(self, morphology_id: str, breed_id: str) -> bool:
-        """检查形态学是否与品种兼容"""
+        """检查品系是否与品种兼容"""
         pass
 
     @abstractmethod
@@ -176,7 +176,7 @@ class MorphologyRepository(BaseRepository[Morphology]):
         include_deleted: bool = False,
     ) -> tuple[list[Morphology], int]:
         """
-        搜索形态学
+        搜索品系
 
         Args:
             search_term: 搜索关键词
@@ -187,6 +187,6 @@ class MorphologyRepository(BaseRepository[Morphology]):
             include_deleted: 是否包含已删除的记录
 
         Returns:
-            tuple[List[Morphology], int]: (形态学列表, 总数量)
+            tuple[List[Morphology], int]: (品系列表, 总数量)
         """
         pass

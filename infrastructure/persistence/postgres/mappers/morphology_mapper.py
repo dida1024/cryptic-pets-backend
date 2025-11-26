@@ -9,7 +9,7 @@ from infrastructure.persistence.postgres.models.morphology import MorphologyMode
 
 
 class MorphologyMapper(BaseMapper[Morphology, MorphologyModel]):
-    """形态学实体与模型转换器"""
+    """品系实体与模型转换器"""
 
     def __init__(self, gene_mapping_mapper: MorphGeneMappingMapper):
         self.gene_mapping_mapper = gene_mapping_mapper

@@ -35,7 +35,7 @@ class InvalidOwnershipTransferError(BusinessRuleViolationError):
 
 
 class IncompatibleMorphologyError(BusinessRuleViolationError):
-    """不兼容的形态学异常"""
+    """不兼容的品系异常"""
 
     def __init__(self, message: str):
         super().__init__(message, "INCOMPATIBLE_MORPHOLOGY")
@@ -63,7 +63,7 @@ class GeneNotFoundError(EntityNotFoundError):
 
 
 class MorphologyNotFoundError(EntityNotFoundError):
-    """形态学未找到异常"""
+    """品系未找到异常"""
 
     def __init__(self, morphology_id: str):
         super().__init__("Morphology", morphology_id)
@@ -85,7 +85,7 @@ class GeneRepositoryError(RepositoryError):
 
 
 class MorphologyRepositoryError(RepositoryError):
-    """形态学Repository异常"""
+    """品系Repository异常"""
     pass
 
 

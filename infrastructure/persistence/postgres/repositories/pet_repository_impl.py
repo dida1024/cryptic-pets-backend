@@ -240,7 +240,7 @@ class PostgreSQLPetRepositoryImpl(EventAwareRepository[Pet], PetRepository):
             raise PetRepositoryError(f"Failed to get pets by breed: {e}", "get_by_breed_id")
 
     async def get_by_morphology_id(self, morphology_id: str) -> list[Pet]:
-        """根据形态学ID获取宠物列表"""
+        """根据品系ID获取宠物列表"""
         try:
             stmt = (
                 select(PetModel)

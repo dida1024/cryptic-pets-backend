@@ -185,14 +185,14 @@ class UpdatePetHandler:
         if command.gender is not None:
             pet.gender = command.gender
         if command.morphology_id is not None and self.pet_domain_service:
-            # 如果有领域服务，使用领域服务更新形态学（包含兼容性验证）
+            # 如果有领域服务，使用领域服务更新品系（包含兼容性验证）
             pet = await self.pet_domain_service.update_pet_morphology(
                 pet=pet,
                 morphology_id=command.morphology_id,
                 current_user_id=command.owner_id or pet.owner_id,
             )
         elif command.morphology_id is not None:
-            # 如果没有领域服务，直接更新形态学
+            # 如果没有领域服务，直接更新品系
             pet.update_morphology(command.morphology_id)
 
         pet._update_timestamp()

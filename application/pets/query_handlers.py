@@ -82,7 +82,7 @@ class PetQueryService:
             if breed:
                 pet_view.breed = BreedView.from_entity(breed)
 
-        # 加载形态学信息（如果请求）
+        # 加载品系信息（如果请求）
         if query.include_morphology and pet.morphology_id:
             morphology = await self.morphology_repository.get_by_id(pet.morphology_id)
             if morphology:
@@ -260,14 +260,14 @@ class PetQueryService:
         )
 
     async def list_pets_by_morphology(self, query: ListPetsByMorphologyQuery) -> PetSearchResult:
-        """列出特定形态学的宠物"""
-        # 验证形态学存在
+        """列出特定品系的宠物"""
+        # 验证品系存在
         morphology = await self.morphology_repository.get_by_id(query.morphology_id)
         if not morphology:
             from domain.pets.exceptions import MorphologyNotFoundError
             raise MorphologyNotFoundError(query.morphology_id)
 
-        # 获取该形态学的宠物
+        # 获取该品系的宠物
         pets = await self.pet_repository.get_by_morphology_id(query.morphology_id)
 
         # 计算分页

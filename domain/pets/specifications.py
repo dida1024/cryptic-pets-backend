@@ -33,13 +33,13 @@ class PetByBreedSpecification(Specification[Pet]):
 
 
 class PetByMorphologySpecification(Specification[Pet]):
-    """按形态学筛选宠物的规约"""
+    """按品系筛选宠物的规约"""
 
     def __init__(self, morphology_id: str):
         self.morphology_id = morphology_id
 
     def is_satisfied_by(self, pet: Pet) -> bool:
-        """检查宠物是否具有指定形态学"""
+        """检查宠物是否具有指定品系"""
         return pet.morphology_id == self.morphology_id
 
 

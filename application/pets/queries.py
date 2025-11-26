@@ -11,7 +11,7 @@ class GetPetByIdQuery(BaseModel):
     pet_id: str
     include_owner: bool = Field(default=False, description="是否包含主人信息")
     include_breed: bool = Field(default=False, description="是否包含品种信息")
-    include_morphology: bool = Field(default=False, description="是否包含形态学信息")
+    include_morphology: bool = Field(default=False, description="是否包含品系信息")
 
 
 class GetPetByNameQuery(BaseModel):
@@ -25,7 +25,7 @@ class SearchPetsQuery(BaseModel):
     search_term: str | None = Field(default=None, description="搜索关键词")
     owner_id: str | None = Field(default=None, description="主人ID过滤")
     breed_id: str | None = Field(default=None, description="品种ID过滤")
-    morphology_id: str | None = Field(default=None, description="形态学ID过滤")
+    morphology_id: str | None = Field(default=None, description="品系ID过滤")
     gender: str | None = Field(default=None, description="性别过滤")
     page: int = Field(default=1, description="页码，从1开始")
     page_size: int = Field(default=10, description="每页大小")
@@ -47,7 +47,7 @@ class ListPetsByBreedQuery(BaseModel):
 
 
 class ListPetsByMorphologyQuery(BaseModel):
-    """列出特定形态学的宠物查询"""
+    """列出特定品系的宠物查询"""
     morphology_id: str
     page: int = Field(default=1, description="页码，从1开始")
     page_size: int = Field(default=10, description="每页大小")

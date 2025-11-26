@@ -128,7 +128,7 @@ async def get_morphology_repository(
         lambda: MorphologyMapper(MorphGeneMappingMapper(GeneMapper()))
     ),
 ) -> PostgreSQLMorphologyRepositoryImpl:
-    """获取形态学仓储实例"""
+    """获取品系仓储实例"""
     return PostgreSQLMorphologyRepositoryImpl(session, mapper)
 
 
@@ -304,16 +304,6 @@ async def get_delete_pet_handler(
 # async def get_notification_service() -> NotificationService:
 #     """获取通知服务实例"""
 #     return NotificationService()
-
-
-# 宠物记录仓储依赖
-async def get_pet_record_repository(
-    session: AsyncSession = Depends(get_db_session),
-    event_publisher: EventPublisher = Depends(get_event_publisher),
-) -> PostgreSQLPetRecordRepositoryImpl:
-    """获取宠物记录仓储实例"""
-    mapper = PetRecordMapper()
-    return PostgreSQLPetRecordRepositoryImpl(session, mapper, event_publisher)
 
 
 # 宠物记录命令处理器依赖

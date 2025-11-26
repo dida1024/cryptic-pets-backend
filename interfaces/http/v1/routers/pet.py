@@ -80,7 +80,7 @@ async def search_pets(
     search_term: str | None = Query(None, description="搜索关键字"),
     owner_id: str | None = Query(None, description="按主人ID过滤"),
     breed_id: str | None = Query(None, description="按品种ID过滤"),
-    morphology_id: str | None = Query(None, description="按形态学ID过滤"),
+    morphology_id: str | None = Query(None, description="按品系ID过滤"),
     page: int = Query(1, ge=1, description="页码"),
     page_size: int = Query(10, ge=1, le=100, description="每页数量"),
     query_service: PetQueryService = Depends(get_pet_query_service),
@@ -144,7 +144,7 @@ async def get_pet(
     pet_id: str = Path(..., description="宠物ID"),
     include_owner: bool = Query(True, description="是否包含主人信息"),
     include_breed: bool = Query(True, description="是否包含品种信息"),
-    include_morphology: bool = Query(False, description="是否包含形态学信息"),
+    include_morphology: bool = Query(False, description="是否包含品系信息"),
     query_service: PetQueryService = Depends(get_pet_query_service),
 ) -> ApiResponse[PetDetailResponse]:
     """获取宠物详情"""

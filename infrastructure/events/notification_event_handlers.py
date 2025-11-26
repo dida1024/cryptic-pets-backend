@@ -51,7 +51,7 @@ class NotificationEventHandler(DomainEventHandler):
         """Handle pet morphology updated notification."""
         logger.info(f"NOTIFICATION: Pet {event.pet_id} morphology updated")
         # 在实际应用中，这里可以：
-        # - 通知主人形态变化
+        # - 通知主人品系变化
         # - 更新显示信息
         # - 重新计算兼容性
         # - 发送到外部系统

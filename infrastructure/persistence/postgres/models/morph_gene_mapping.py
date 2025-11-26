@@ -59,7 +59,7 @@ class MorphGeneMappingModel(BaseModel, table=True):
         # 唯一约束：防止宠物重复添加相同基因
         UniqueConstraint('pet_id', 'gene_id', name='unique_pet_gene'),
 
-        # 索引：优化根据形态学ID查询基因的性能
+        # 索引：优化根据品系ID查询基因的性能
         Index('idx_morphology_genes', 'morphology_id'),
         # 索引：优化根据宠物ID查询额外基因的性能
         Index('idx_pet_extra_genes', 'pet_id'),

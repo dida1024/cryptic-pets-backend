@@ -16,7 +16,7 @@ from infrastructure.persistence.postgres.models.morphology import MorphologyMode
 
 
 class PostgreSQLMorphologyRepositoryImpl(MorphologyRepository):
-    """形态学Repository的PostgreSQL实现"""
+    """品系Repository的PostgreSQL实现"""
 
     def __init__(self, session: AsyncSession, mapper: MorphologyMapper):
         self.session = session
@@ -24,7 +24,7 @@ class PostgreSQLMorphologyRepositoryImpl(MorphologyRepository):
         self.logger = logger
 
     async def get_by_id(self, entity_id: str) -> Morphology | None:
-        """根据ID获取形态学"""
+        """根据ID获取品系"""
         try:
             stmt = (
                 select(MorphologyModel)
@@ -51,7 +51,7 @@ class PostgreSQLMorphologyRepositoryImpl(MorphologyRepository):
             )
 
     async def create(self, entity: Morphology) -> Morphology:
-        """创建形态学"""
+        """创建品系"""
         try:
             model = self.mapper.to_model(entity)
             self.session.add(model)
@@ -67,7 +67,7 @@ class PostgreSQLMorphologyRepositoryImpl(MorphologyRepository):
             )
 
     async def update(self, entity: Morphology) -> Morphology:
-        """更新形态学"""
+        """更新品系"""
         try:
             existing_model = await self.session.get(MorphologyModel, entity.id)
             if existing_model is None or existing_model.is_deleted:
@@ -92,7 +92,7 @@ class PostgreSQLMorphologyRepositoryImpl(MorphologyRepository):
             )
 
     async def delete(self, entity: Morphology | str) -> bool:
-        """删除形态学（软删除）"""
+        """删除品系（软删除）"""
         try:
             entity_id = entity.id if isinstance(entity, Morphology) else entity
             model = await self.session.get(MorphologyModel, entity_id)
@@ -113,7 +113,7 @@ class PostgreSQLMorphologyRepositoryImpl(MorphologyRepository):
     async def list_all(
         self, page: int = 1, page_size: int = 10, include_deleted: bool = False
     ) -> tuple[list[Morphology], int]:
-        """获取形态学列表"""
+        """获取品系列表"""
         try:
             stmt = select(MorphologyModel).options(
                 selectinload(MorphologyModel.gene_mappings).selectinload(
@@ -152,9 +152,9 @@ class PostgreSQLMorphologyRepositoryImpl(MorphologyRepository):
             )
 
     async def get_by_gene_combination(self, gene_ids: list[str]) -> list[Morphology]:
-        """根据基因组合获取形态学列表"""
+        """根据基因组合获取品系列表"""
         try:
-            # 查找包含所有指定基因的形态学
+            # 查找包含所有指定基因的品系
             stmt = (
                 select(MorphologyModel)
                 .options(
@@ -187,7 +187,7 @@ class PostgreSQLMorphologyRepositoryImpl(MorphologyRepository):
             )
 
     async def get_by_required_genes(self, gene_ids: list[str]) -> list[Morphology]:
-        """根据必需基因获取形态学列表"""
+        """根据必需基因获取品系列表"""
         try:
             stmt = (
                 select(MorphologyModel)
@@ -222,7 +222,7 @@ class PostgreSQLMorphologyRepositoryImpl(MorphologyRepository):
             )
 
     async def get_morphologies_containing_gene(self, gene_id: str) -> list[Morphology]:
-        """获取包含指定基因的所有形态学"""
+        """获取包含指定基因的所有品系"""
         try:
             stmt = (
                 select(MorphologyModel)
@@ -254,13 +254,13 @@ class PostgreSQLMorphologyRepositoryImpl(MorphologyRepository):
             )
 
     async def is_compatible_with_breed(self, morphology_id: str, breed_id: str) -> bool:
-        """检查形态学是否与品种兼容"""
+        """检查品系是否与品种兼容"""
         try:
-            # 在实际实现中，这里应该检查形态学和品种的兼容性
-            # 例如，检查形态学的基因是否与品种的基因兼容
-            # 简化起见，这里假设所有形态学都与品种兼容
+            # 在实际实现中，这里应该检查品系和品种的兼容性
+            # 例如，检查品系的基因是否与品种的基因兼容
+            # 简化起见，这里假设所有品系都与品种兼容
 
-            # 首先检查形态学和品种是否存在
+            # 首先检查品系和品种是否存在
             morphology_exists = await self.session.get(MorphologyModel, morphology_id) is not None
             breed_exists = await self.session.get(BreedModel, breed_id) is not None
 
@@ -268,8 +268,8 @@ class PostgreSQLMorphologyRepositoryImpl(MorphologyRepository):
                 return False
 
             # 在实际应用中，这里应该有更复杂的兼容性检查逻辑
-            # 例如，检查形态学的基因是否与品种的基因兼容
-            # 简化起见，这里假设所有存在的形态学都与品种兼容
+            # 例如，检查品系的基因是否与品种的基因兼容
+            # 简化起见，这里假设所有存在的品系都与品种兼容
             return True
 
         except Exception as e:
@@ -290,7 +290,7 @@ class PostgreSQLMorphologyRepositoryImpl(MorphologyRepository):
         page_size: int = 10,
         include_deleted: bool = False,
     ) -> tuple[list[Morphology], int]:
-        """搜索形态学"""
+        """搜索品系"""
         try:
             # 构建基础查询
             stmt = select(MorphologyModel).options(

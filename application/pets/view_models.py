@@ -50,7 +50,7 @@ class BreedView(BaseModel):
 
 
 class MorphologyView(BaseModel):
-    """形态学视图模型"""
+    """品系视图模型"""
 
     id: str
     name: dict[str, str] | None = None  # I18n转换为字典
