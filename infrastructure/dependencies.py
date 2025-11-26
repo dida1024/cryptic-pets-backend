@@ -27,6 +27,7 @@ from application.pets.command_handlers import (
     UpdatePetHandler,
 )
 from application.pets.query_handlers import PetQueryService
+from application.pets.read_models import PetSearchReadRepository
 from application.users.command_handlers import (
     CreateUserHandler,
     DeleteUserHandler,
@@ -61,6 +62,9 @@ from infrastructure.persistence.postgres.repositories.pet_record_repository_impl
 )
 from infrastructure.persistence.postgres.repositories.pet_repository_impl import (
     PostgreSQLPetRepositoryImpl,
+)
+from infrastructure.persistence.postgres.repositories.pet_search_read_repository import (
+    PostgreSQLPetSearchReadRepository,
 )
 from infrastructure.persistence.postgres.repositories.user_repository_impl import (
     PostgreSQLUserRepositoryImpl,
@@ -111,6 +115,13 @@ async def get_pet_repository(
 ) -> PostgreSQLPetRepositoryImpl:
     """获取宠物仓储实例"""
     return PostgreSQLPetRepositoryImpl(session, mapper, event_publisher)
+
+
+async def get_pet_search_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> PetSearchReadRepository:
+    """获取宠物搜索读仓储实例"""
+    return PostgreSQLPetSearchReadRepository(session)
 
 
 async def get_breed_repository(
@@ -218,6 +229,7 @@ async def get_create_pet_record_handler(
 
 async def get_pet_query_service(
     pet_repository: PostgreSQLPetRepositoryImpl = Depends(get_pet_repository),
+    pet_search_repository: PetSearchReadRepository = Depends(get_pet_search_repository),
     user_repository: PostgreSQLUserRepositoryImpl = Depends(get_user_repository),
     breed_repository: PostgreSQLBreedRepositoryImpl = Depends(get_breed_repository),
     morphology_repository: PostgreSQLMorphologyRepositoryImpl = Depends(
@@ -226,7 +238,11 @@ async def get_pet_query_service(
 ) -> PetQueryService:
     """获取宠物查询服务实例"""
     return PetQueryService(
-        pet_repository, user_repository, breed_repository, morphology_repository
+        pet_repository,
+        pet_search_repository,
+        user_repository,
+        breed_repository,
+        morphology_repository,
     )
 
 

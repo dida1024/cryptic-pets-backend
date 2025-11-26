@@ -13,6 +13,7 @@ from application.pets.queries import (
     ListPetsByOwnerQuery,
     SearchPetsQuery,
 )
+from application.pets.read_models import PetSearchReadRepository
 from application.pets.view_models import (
     BreedView,
     MorphologyView,
@@ -21,6 +22,7 @@ from application.pets.view_models import (
     PetSearchResult,
     PetSummaryView,
 )
+from domain.common.entities import I18n
 from domain.pets.exceptions import PetNotFoundError
 from domain.pets.repository import BreedRepository, MorphologyRepository, PetRepository
 from domain.users.repository import UserRepository
@@ -32,11 +34,13 @@ class PetQueryService:
     def __init__(
         self,
         pet_repository: PetRepository,
+        pet_search_repository: PetSearchReadRepository,
         user_repository: UserRepository,
         breed_repository: BreedRepository,
         morphology_repository: MorphologyRepository,
     ):
         self.pet_repository = pet_repository
+        self.pet_search_repository = pet_search_repository
         self.user_repository = user_repository
         self.breed_repository = breed_repository
         self.morphology_repository = morphology_repository
@@ -115,7 +119,7 @@ class PetQueryService:
     async def search_pets(self, query: SearchPetsQuery) -> PetSearchResult:
         """搜索宠物"""
         # 搜索宠物
-        pets, total_count = await self.pet_repository.search_pets(
+        rows, total_count = await self.pet_search_repository.search_pets(
             search_term=query.search_term,
             owner_id=query.owner_id,
             breed_id=query.breed_id,
@@ -127,28 +131,19 @@ class PetQueryService:
 
         # 创建摘要视图模型
         pet_views = []
-        for pet in pets:
+        for row in rows:
             # 获取主人名称（如果有主人ID）
-            owner_name = None
-            if pet.owner_id:
-                owner = await self.user_repository.get_by_id(pet.owner_id)
-                if owner:
-                    owner_name = owner.username or owner.full_name
+            owner_name = row.owner_name
 
-            # 获取品种名称（如果有品种ID）
-            breed_name = None
-            if pet.breed_id:
-                breed = await self.breed_repository.get_by_id(pet.breed_id)
-                if breed and breed.name:
-                    # 直接使用I18n对象
-                    breed_name = breed.name
+            # 获取品种名称（如果有品种信息）
+            breed_name = I18n.model_validate(row.breed_name) if row.breed_name else None
 
             # 创建摘要视图
             pet_view = PetSummaryView(
-                id=pet.id,
-                name=pet.name,
-                gender=pet.gender,
-                created_at=pet.created_at,
+                id=row.id,
+                name=row.name,
+                gender=row.gender,
+                created_at=row.created_at,
                 owner_name=owner_name,
                 breed_name=breed_name,
                 # 在实际实现中，这里应该获取主图URL

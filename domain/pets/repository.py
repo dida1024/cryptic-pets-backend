@@ -33,34 +33,6 @@ class PetRepository(BaseRepository[Pet]):
         """检查指定名称的宠物是否存在（可选排除ID）"""
         pass
 
-    @abstractmethod
-    async def search_pets(
-        self,
-        search_term: str,
-        owner_id: str = None,
-        breed_id: str = None,
-        morphology_id: str = None,
-        page: int = 1,
-        page_size: int = 10,
-        include_deleted: bool = False,
-    ) -> tuple[list[Pet], int]:
-        """
-        搜索宠物
-
-        Args:
-            search_term: 搜索关键词
-            owner_id: 可选的主人ID过滤
-            breed_id: 可选的品种ID过滤
-            morphology_id: 可选的品系ID过滤
-            page: 页码，从1开始
-            page_size: 每页大小
-            include_deleted: 是否包含已删除的记录
-
-        Returns:
-            tuple[List[Pet], int]: (宠物列表, 总数量)
-        """
-        pass
-
 
 class BreedRepository(BaseRepository[Breed]):
     """品种聚合Repository接口"""

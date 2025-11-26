@@ -1,6 +1,6 @@
 
 from loguru import logger
-from sqlalchemy import ColumnElement, UnaryExpression, and_, func, select
+from sqlalchemy import ColumnElement, UnaryExpression, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlmodel import String, cast
@@ -287,64 +287,6 @@ class PostgreSQLPetRepositoryImpl(EventAwareRepository[Pet], PetRepository):
         except Exception as e:
             self.logger.error(f"Failed to get pet by name {name}: {e}")
             raise PetRepositoryError(f"Failed to get pet by name: {e}", "get_by_name")
-
-    async def search_pets(
-        self,
-        search_term: str,
-        owner_id: str = None,
-        breed_id: str = None,
-        morphology_id: str = None,
-        page: int = 1,
-        page_size: int = 10,
-        include_deleted: bool = False,
-    ) -> tuple[list[Pet], int]:
-        """搜索宠物"""
-        try:
-            # 构建搜索条件
-            search_conditions = []
-            if owner_id:
-                search_conditions.append(PetModel.owner_id == owner_id)
-            if breed_id:
-                search_conditions.append(PetModel.breed_id == breed_id)
-            if morphology_id:
-                search_conditions.append(PetModel.morphology_id == morphology_id)
-            if not include_deleted:
-                search_conditions.append(PetModel.is_deleted.is_(False))
-            if search_term:
-                search_conditions.append(PetModel.name.ilike(f"%{search_term}%"))
-
-            # 组合所有条件
-            where_clause = and_(*search_conditions)
-
-            stmt = (
-                select(PetModel)
-                .options(
-                    selectinload(PetModel.breed),
-                    selectinload(PetModel.morphology),
-                    selectinload(PetModel.extra_gene_list)
-                )
-                .where(where_clause)
-            )
-            count_stmt = select(func.count(PetModel.id)).where(where_clause)
-
-            # 获取总数
-            count_result = await self.session.execute(count_stmt)
-            total_count = count_result.scalar()
-
-            # 分页查询
-            offset = (page - 1) * page_size
-            stmt = stmt.offset(offset).limit(page_size).order_by(PetModel.created_at.desc())
-
-            result = await self.session.execute(stmt)
-            models = result.scalars().all()
-
-            pets = self.mapper.to_domain_list(list(models))
-
-            return pets, total_count
-
-        except Exception as e:
-            self.logger.error(f"Failed to search pets with term {search_term}: {e}")
-            raise PetRepositoryError(f"Failed to search pets: {e}", "search_pets")
 
     async def exists_by_name(self, name: str, exclude_id: str | None = None) -> bool:
         """检查指定名称的宠物是否存在（可选排除ID）"""
