@@ -31,3 +31,36 @@ class UserPasswordChangedEvent(DomainEvent):
     """Event raised when user password is changed."""
 
     user_id: str = Field(...)
+
+
+class UserDeactivatedEvent(DomainEvent):
+    """Event raised when a user account is deactivated."""
+
+    user_id: str = Field(...)
+    username: str = Field(...)
+
+
+class UserActivatedEvent(DomainEvent):
+    """Event raised when a user account is activated."""
+
+    user_id: str = Field(...)
+    username: str = Field(...)
+
+
+class UserPromotedEvent(DomainEvent):
+    """Event raised when a user is promoted to a higher role."""
+
+    user_id: str = Field(...)
+    username: str = Field(...)
+    old_user_type: str = Field(...)
+    new_user_type: str = Field(...)
+    promoted_by: str | None = Field(default=None)
+
+
+class UserDemotedEvent(DomainEvent):
+    """Event raised when a user is demoted to a lower role."""
+
+    user_id: str = Field(...)
+    username: str = Field(...)
+    old_user_type: str = Field(...)
+    new_user_type: str = Field(...)

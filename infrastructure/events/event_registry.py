@@ -1,6 +1,6 @@
 """Event registry for registering domain event handlers."""
 
-from domain.common.events import get_event_bus
+from domain.common.events import EventBus
 from domain.pets.event_handlers import (
     PetCreatedEventHandler,
     PetDeletedEventHandler,
@@ -15,6 +15,7 @@ from domain.pets.events import (
 )
 from domain.users.event_handlers import UserCreatedEventHandler, UserUpdatedEventHandler
 from domain.users.events import UserCreatedEvent, UserUpdatedEvent
+from infrastructure.dependencies.events import get_event_bus
 from infrastructure.events.audit_event_handlers import (
     AuditEventHandler,
     PetAuditEventHandler,
@@ -27,9 +28,18 @@ from infrastructure.events.notification_event_handlers import (
 )
 
 
-def register_all_event_handlers() -> None:
-    """Register all domain event handlers with the event bus."""
-    event_bus = get_event_bus()
+def register_all_event_handlers(event_bus: EventBus | None = None) -> EventBus:
+    """Register all domain event handlers with the event bus.
+
+    Args:
+        event_bus: Optional EventBus instance. If not provided,
+                  uses the global instance from dependencies.
+
+    Returns:
+        The EventBus instance with all handlers registered.
+    """
+    if event_bus is None:
+        event_bus = get_event_bus()
 
     # 注册宠物相关事件处理器
     event_bus.subscribe(PetCreatedEvent, PetCreatedEventHandler())
@@ -77,20 +87,44 @@ def register_all_event_handlers() -> None:
     event_bus.subscribe(UserCreatedEvent, PushNotificationHandler())
     event_bus.subscribe(UserUpdatedEvent, PushNotificationHandler())
 
+    return event_bus
 
-def register_pet_event_handlers() -> None:
-    """Register only pet-related event handlers."""
-    event_bus = get_event_bus()
+
+def register_pet_event_handlers(event_bus: EventBus | None = None) -> EventBus:
+    """Register only pet-related event handlers.
+
+    Args:
+        event_bus: Optional EventBus instance. If not provided,
+                  uses the global instance from dependencies.
+
+    Returns:
+        The EventBus instance with pet handlers registered.
+    """
+    if event_bus is None:
+        event_bus = get_event_bus()
 
     event_bus.subscribe(PetCreatedEvent, PetCreatedEventHandler())
     event_bus.subscribe(PetOwnershipChangedEvent, PetOwnershipChangedEventHandler())
     event_bus.subscribe(PetMorphologyUpdatedEvent, PetMorphologyUpdatedEventHandler())
     event_bus.subscribe(PetDeletedEvent, PetDeletedEventHandler())
 
+    return event_bus
 
-def register_user_event_handlers() -> None:
-    """Register only user-related event handlers."""
-    event_bus = get_event_bus()
+
+def register_user_event_handlers(event_bus: EventBus | None = None) -> EventBus:
+    """Register only user-related event handlers.
+
+    Args:
+        event_bus: Optional EventBus instance. If not provided,
+                  uses the global instance from dependencies.
+
+    Returns:
+        The EventBus instance with user handlers registered.
+    """
+    if event_bus is None:
+        event_bus = get_event_bus()
 
     event_bus.subscribe(UserCreatedEvent, UserCreatedEventHandler())
     event_bus.subscribe(UserUpdatedEvent, UserUpdatedEventHandler())
+
+    return event_bus

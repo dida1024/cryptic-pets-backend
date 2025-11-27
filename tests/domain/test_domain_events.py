@@ -6,7 +6,7 @@ import pytest
 from pydantic import Field
 
 from domain.common.aggregate_root import AggregateRoot
-from domain.common.event_publisher import EventPublisher
+from domain.common.event_publisher import EventPublisher, create_event_publisher
 from domain.common.events import DomainEvent, DomainEventHandler, EventBus
 from domain.pets.events import PetCreatedEvent
 
@@ -77,10 +77,18 @@ class TestDomainEvents:
         assert not aggregate.has_domain_events()
         assert aggregate.get_domain_events_count() == 0
 
+
+class TestEventBus:
+    """Test cases for EventBus."""
+
+    @pytest.fixture
+    def event_bus(self):
+        """Create an isolated EventBus for testing."""
+        return EventBus()
+
     @pytest.mark.anyio
-    async def test_event_bus_publish_and_subscribe(self):
+    async def test_publish_and_subscribe(self, event_bus):
         """Test event bus publishing and subscription."""
-        event_bus = EventBus()
         handler = TestEventHandler()
 
         # Subscribe handler
@@ -95,9 +103,8 @@ class TestDomainEvents:
         assert handler.handled_events[0] == event
 
     @pytest.mark.anyio
-    async def test_event_bus_multiple_handlers(self):
+    async def test_multiple_handlers(self, event_bus):
         """Test that multiple handlers can subscribe to the same event."""
-        event_bus = EventBus()
         handler1 = TestEventHandler()
         handler2 = TestEventHandler()
 
@@ -116,9 +123,8 @@ class TestDomainEvents:
         assert handler2.handled_events[0] == event
 
     @pytest.mark.anyio
-    async def test_event_bus_unsubscribe(self):
+    async def test_unsubscribe(self, event_bus):
         """Test unsubscribing handlers from events."""
-        event_bus = EventBus()
         handler = TestEventHandler()
 
         # Subscribe and then unsubscribe
@@ -132,32 +138,209 @@ class TestDomainEvents:
         # Handler should not receive the event
         assert len(handler.handled_events) == 0
 
+    def test_get_handlers_count(self, event_bus):
+        """Test getting handler count."""
+        handler1 = TestEventHandler()
+        handler2 = TestEventHandler()
+
+        assert event_bus.get_handlers_count() == 0
+        assert event_bus.get_handlers_count(TestEvent) == 0
+
+        event_bus.subscribe(TestEvent, handler1)
+        assert event_bus.get_handlers_count() == 1
+        assert event_bus.get_handlers_count(TestEvent) == 1
+
+        event_bus.subscribe(TestEvent, handler2)
+        assert event_bus.get_handlers_count() == 2
+        assert event_bus.get_handlers_count(TestEvent) == 2
+
+    def test_has_handlers(self, event_bus):
+        """Test checking for handlers."""
+        handler = TestEventHandler()
+
+        assert not event_bus.has_handlers(TestEvent)
+
+        event_bus.subscribe(TestEvent, handler)
+        assert event_bus.has_handlers(TestEvent)
+
+        event_bus.unsubscribe(TestEvent, handler)
+        assert not event_bus.has_handlers(TestEvent)
+
+    def test_clear_handlers(self, event_bus):
+        """Test clearing all handlers."""
+        handler = TestEventHandler()
+
+        event_bus.subscribe(TestEvent, handler)
+        assert event_bus.get_handlers_count() == 1
+
+        event_bus.clear_handlers()
+        assert event_bus.get_handlers_count() == 0
+
     @pytest.mark.anyio
-    async def test_event_publisher_with_aggregate(self):
-        """Test event publisher with aggregate roots."""
-        publisher = EventPublisher()
+    async def test_publish_all(self, event_bus):
+        """Test publishing multiple events."""
+        handler = TestEventHandler()
+        event_bus.subscribe(TestEvent, handler)
+
+        events = [
+            TestEvent(message="Message 1"),
+            TestEvent(message="Message 2"),
+            TestEvent(message="Message 3"),
+        ]
+
+        await event_bus.publish_all(events)
+
+        assert len(handler.handled_events) == 3
+
+
+class TestEventPublisher:
+    """Test cases for EventPublisher."""
+
+    @pytest.fixture
+    def event_bus(self):
+        """Create an isolated EventBus for testing."""
+        return EventBus()
+
+    @pytest.fixture
+    def publisher(self, event_bus):
+        """Create an EventPublisher with injected EventBus."""
+        return EventPublisher(event_bus)
+
+    @pytest.mark.anyio
+    async def test_publish_events_from_aggregate(self, publisher, event_bus):
+        """Test publishing events from aggregate root."""
+        handler = TestEventHandler()
+        event_bus.subscribe(TestEvent, handler)
+
         aggregate = TestAggregate(name="Test")
-
-        # Mock the event bus
-        publisher._event_bus.publish_all = AsyncMock()
-
-        # Add events to aggregate
         aggregate.do_something()
         aggregate.do_something()
 
-        # Publish events
         await publisher.publish_events_from_aggregate(aggregate)
 
-        # Verify events were published and cleared
-        publisher._event_bus.publish_all.assert_called_once()
+        # Verify events were published
+        assert len(handler.handled_events) == 2
+        # Verify events were cleared from aggregate
         assert not aggregate.has_domain_events()
 
-    def test_pet_created_event(self):
+    @pytest.mark.anyio
+    async def test_publish_event(self, publisher, event_bus):
+        """Test publishing a single event directly."""
+        handler = TestEventHandler()
+        event_bus.subscribe(TestEvent, handler)
+
+        event = TestEvent(message="Direct event")
+        await publisher.publish_event(event)
+
+        assert len(handler.handled_events) == 1
+        assert handler.handled_events[0] == event
+
+    @pytest.mark.anyio
+    async def test_publish_events(self, publisher, event_bus):
+        """Test publishing multiple events directly."""
+        handler = TestEventHandler()
+        event_bus.subscribe(TestEvent, handler)
+
+        events = [
+            TestEvent(message="Event 1"),
+            TestEvent(message="Event 2"),
+        ]
+        await publisher.publish_events(events)
+
+        assert len(handler.handled_events) == 2
+
+    @pytest.mark.anyio
+    async def test_create_event_publisher_helper(self):
+        """Test the create_event_publisher helper function."""
+        event_bus = EventBus()
+        publisher = create_event_publisher(event_bus)
+
+        assert publisher.event_bus is event_bus
+
+    @pytest.mark.anyio
+    async def test_publisher_with_mock_event_bus(self):
+        """Test publisher with a mocked event bus."""
+        mock_bus = AsyncMock(spec=EventBus)
+        publisher = EventPublisher(mock_bus)
+
+        aggregate = TestAggregate(name="Test")
+        aggregate.do_something()
+
+        await publisher.publish_events_from_aggregate(aggregate)
+
+        mock_bus.publish_all.assert_called_once()
+
+
+class TestEventBusIsolation:
+    """Test cases to verify EventBus instances are properly isolated."""
+
+    @pytest.mark.anyio
+    async def test_separate_event_buses_are_isolated(self):
+        """Test that separate EventBus instances don't share state."""
+        bus1 = EventBus()
+        bus2 = EventBus()
+
+        handler1 = TestEventHandler()
+        handler2 = TestEventHandler()
+
+        bus1.subscribe(TestEvent, handler1)
+        bus2.subscribe(TestEvent, handler2)
+
+        event = TestEvent(message="Test")
+
+        # Publish to bus1 only
+        await bus1.publish(event)
+
+        assert len(handler1.handled_events) == 1
+        assert len(handler2.handled_events) == 0
+
+        # Publish to bus2 only
+        await bus2.publish(event)
+
+        assert len(handler1.handled_events) == 1
+        assert len(handler2.handled_events) == 1
+
+    @pytest.mark.anyio
+    async def test_publishers_with_different_buses(self):
+        """Test that publishers with different buses are isolated."""
+        bus1 = EventBus()
+        bus2 = EventBus()
+
+        publisher1 = EventPublisher(bus1)
+        publisher2 = EventPublisher(bus2)
+
+        handler1 = TestEventHandler()
+        handler2 = TestEventHandler()
+
+        bus1.subscribe(TestEvent, handler1)
+        bus2.subscribe(TestEvent, handler2)
+
+        aggregate1 = TestAggregate(name="Test1")
+        aggregate1.do_something()
+
+        aggregate2 = TestAggregate(name="Test2")
+        aggregate2.do_something()
+
+        # Publish from publisher1
+        await publisher1.publish_events_from_aggregate(aggregate1)
+
+        assert len(handler1.handled_events) == 1
+        assert len(handler2.handled_events) == 0
+
+        # Publish from publisher2
+        await publisher2.publish_events_from_aggregate(aggregate2)
+
+        assert len(handler1.handled_events) == 1
+        assert len(handler2.handled_events) == 1
+
+
+class TestPetCreatedEvent:
+    """Test cases for specific domain events."""
+
+    def test_pet_created_event_creation(self):
         """Test pet created event creation."""
         event = PetCreatedEvent(
-            pet_id="pet123",
-            owner_id="owner456",
-            breed_id="breed789"
+            pet_id="pet123", owner_id="owner456", breed_id="breed789"
         )
 
         assert event.pet_id == "pet123"

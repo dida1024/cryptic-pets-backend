@@ -1,12 +1,12 @@
-"""
-用户命令处理器
-实现CQRS模式的命令部分，处理写操作
+"""User command handlers.
+
+Implements the CQRS pattern's command part, handling write operations.
+Uses domain services and entity methods instead of implementing business logic directly.
 """
 
 from uuid import uuid4
 
 from loguru import logger
-from passlib.context import CryptContext
 
 from application.users.commands import (
     CreateUserCommand,
@@ -15,6 +15,7 @@ from application.users.commands import (
     UpdateUserCommand,
 )
 from domain.users.entities import User
+from domain.users.events import UserCreatedEvent
 from domain.users.exceptions import (
     DuplicateEmailError,
     DuplicateUsernameError,
@@ -22,36 +23,64 @@ from domain.users.exceptions import (
     UserNotFoundError,
 )
 from domain.users.repository import UserRepository
+from domain.users.services import PasswordHasher, PasswordPolicy
 
 
 class CreateUserHandler:
-    """创建用户命令处理器"""
+    """Create user command handler."""
 
-    def __init__(self, user_repository: UserRepository):
+    def __init__(
+        self,
+        user_repository: UserRepository,
+        password_hasher: PasswordHasher,
+        password_policy: PasswordPolicy | None = None,
+    ):
+        """Initialize the handler.
+
+        Args:
+            user_repository: Repository for user persistence.
+            password_hasher: Password hashing service.
+            password_policy: Optional password policy for validation.
+        """
         self.user_repository = user_repository
-        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        self.password_hasher = password_hasher
+        self.password_policy = password_policy or PasswordPolicy()
         self.logger = logger
 
-    def _hash_password(self, password: str) -> str:
-        """哈希密码"""
-        return self.pwd_context.hash(password)
-
     async def handle(self, command: CreateUserCommand) -> User:
-        """处理创建用户命令"""
-        # 检查用户名是否已存在
+        """Handle create user command.
+
+        Args:
+            command: The create user command.
+
+        Returns:
+            The created user entity.
+
+        Raises:
+            DuplicateUsernameError: If username already exists.
+            DuplicateEmailError: If email already exists.
+            WeakPasswordError: If password doesn't meet policy requirements.
+        """
+        # Validate password strength
+        self.password_policy.validate(command.password)
+
+        # Check if username already exists
         if await self.user_repository.exists_by_username(command.username):
             raise DuplicateUsernameError(f"Username '{command.username}' already exists")
 
-        # 检查邮箱是否已存在
+        # Check if email already exists
         if await self.user_repository.exists_by_email(command.email):
             raise DuplicateEmailError(f"Email '{command.email}' already exists")
 
-        # 创建用户实体
+        # Hash the password using the injected hasher
+        hashed_password = self.password_hasher.hash(command.password)
+
+        # Create user entity
         user = User(
             username=command.username,
             email=command.email,
             full_name=command.full_name,
-            hashed_password=self._hash_password(command.password),
+            hashed_password=hashed_password,
             user_type=command.user_type,
             is_active=command.is_active,
         )
@@ -60,136 +89,185 @@ class CreateUserHandler:
 
         self.logger.info(f"Creating user: {user.username}")
 
-        # 添加领域事件（在持久化之前，以便仓储统一发布）
-        from domain.users.events import UserCreatedEvent
-        user._add_domain_event(UserCreatedEvent(
-            user_id=user.id,
-            username=user.username,
-            email=user.email,
-        ))
+        # Add domain event (before persistence, so repository can publish)
+        user.add_domain_event(
+            UserCreatedEvent(
+                user_id=user.id,
+                username=user.username,
+                email=user.email,
+            )
+        )
 
-        # 保存用户（仓储负责发布领域事件）
+        # Save user (repository is responsible for publishing domain events)
         return await self.user_repository.create(user)
 
 
 class UpdateUserHandler:
-    """更新用户命令处理器"""
+    """Update user command handler."""
 
     def __init__(self, user_repository: UserRepository):
+        """Initialize the handler.
+
+        Args:
+            user_repository: Repository for user persistence.
+        """
         self.user_repository = user_repository
         self.logger = logger
 
     async def handle(self, command: UpdateUserCommand) -> User:
-        """处理更新用户命令"""
-        # 获取现有用户
+        """Handle update user command.
+
+        Args:
+            command: The update user command.
+
+        Returns:
+            The updated user entity.
+
+        Raises:
+            UserNotFoundError: If user is not found.
+            DuplicateUsernameError: If new username already exists.
+            DuplicateEmailError: If new email already exists.
+        """
+        # Get existing user
         if not (user := await self.user_repository.get_by_id(command.user_id)):
             raise UserNotFoundError(f"User with id '{command.user_id}' not found")
 
-        # 检查用户名唯一性
+        # Check username uniqueness
         if command.username and command.username != user.username:
-            if await self.user_repository.exists_by_username(command.username, exclude_id=user.id):
-                raise DuplicateUsernameError(f"Username '{command.username}' already exists")
+            if await self.user_repository.exists_by_username(
+                command.username, exclude_id=user.id
+            ):
+                raise DuplicateUsernameError(
+                    f"Username '{command.username}' already exists"
+                )
 
-        # 检查邮箱唯一性
+        # Check email uniqueness
         if command.email and command.email != user.email:
-            if await self.user_repository.exists_by_email(command.email, exclude_id=user.id):
+            if await self.user_repository.exists_by_email(
+                command.email, exclude_id=user.id
+            ):
                 raise DuplicateEmailError(f"Email '{command.email}' already exists")
 
-        # 更新字段
-        updated_fields = []
-        if command.username is not None:
-            user.username = command.username
-            updated_fields.append("username")
-        if command.email is not None:
-            user.email = command.email
-            updated_fields.append("email")
-        if command.full_name is not None:
-            user.full_name = command.full_name
-            updated_fields.append("full_name")
-        if command.user_type is not None:
-            user.user_type = command.user_type
-            updated_fields.append("user_type")
-        if command.is_active is not None:
-            user.is_active = command.is_active
-            updated_fields.append("is_active")
+        # Use entity methods to update fields
+        if command.username is not None and command.username != user.username:
+            user.update_username(command.username)
 
-        user._update_timestamp()
+        if command.email is not None or command.full_name is not None:
+            user.update_profile(
+                full_name=command.full_name,
+                email=command.email,
+            )
+
+        if command.user_type is not None and command.user_type != user.user_type:
+            user.change_user_type(command.user_type)
+
+        if command.is_active is not None:
+            if command.is_active and not user.is_active:
+                user.activate()
+            elif not command.is_active and user.is_active:
+                user.deactivate()
 
         self.logger.info(f"Updating user: {user.username}")
-
-        from domain.users.events import UserUpdatedEvent
-        user._add_domain_event(UserUpdatedEvent(
-            user_id=user.id,
-            updated_fields=updated_fields,
-        ))
 
         return await self.user_repository.update(user)
 
 
 class UpdatePasswordHandler:
-    """更新密码命令处理器"""
+    """Update password command handler."""
 
-    def __init__(self, user_repository: UserRepository):
+    def __init__(
+        self,
+        user_repository: UserRepository,
+        password_hasher: PasswordHasher,
+        password_policy: PasswordPolicy | None = None,
+    ):
+        """Initialize the handler.
+
+        Args:
+            user_repository: Repository for user persistence.
+            password_hasher: Password hashing service.
+            password_policy: Optional password policy for validation.
+        """
         self.user_repository = user_repository
-        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        self.password_hasher = password_hasher
+        self.password_policy = password_policy or PasswordPolicy()
         self.logger = logger
 
-    def _verify_password(self, plain_password: str, hashed_password: str) -> bool:
-        """验证密码"""
-        return self.pwd_context.verify(plain_password, hashed_password)
-
-    def _hash_password(self, password: str) -> str:
-        """哈希密码"""
-        return self.pwd_context.hash(password)
-
     async def handle(self, command: UpdatePasswordCommand) -> User:
-        """处理更新密码命令"""
-        # 获取现有用户
+        """Handle update password command.
+
+        Args:
+            command: The update password command.
+
+        Returns:
+            The updated user entity.
+
+        Raises:
+            UserNotFoundError: If user is not found.
+            InvalidCredentialsError: If current password is incorrect.
+            WeakPasswordError: If new password doesn't meet policy requirements.
+        """
+        # Get existing user
         user = await self.user_repository.get_by_id(command.user_id)
         if not user:
             raise UserNotFoundError(f"User with id '{command.user_id}' not found")
 
-        # 验证当前密码
-        if not self._verify_password(command.current_password, user.hashed_password):
+        # Verify current password using entity method
+        if not user.verify_password(command.current_password, self.password_hasher):
             raise InvalidCredentialsError("Current password is incorrect")
 
-        # 更新密码
-        user.hashed_password = self._hash_password(command.new_password)
-        user._update_timestamp()
+        # Validate new password strength
+        self.password_policy.validate(command.new_password)
+
+        # Use entity method to change password (handles hashing and event)
+        user.change_password(command.new_password, self.password_hasher)
 
         self.logger.info(f"Updating password for user: {user.username}")
-
-        from domain.users.events import UserPasswordChangedEvent
-        user._add_domain_event(UserPasswordChangedEvent(
-            user_id=user.id,
-        ))
 
         return await self.user_repository.update(user)
 
 
 class DeleteUserHandler:
-    """删除用户命令处理器"""
+    """Delete user command handler."""
 
     def __init__(self, user_repository: UserRepository):
+        """Initialize the handler.
+
+        Args:
+            user_repository: Repository for user persistence.
+        """
         self.user_repository = user_repository
         self.logger = logger
 
     async def handle(self, command: DeleteUserCommand) -> bool:
-        """处理删除用户命令"""
-        # 检查用户是否存在
+        """Handle delete user command.
+
+        Args:
+            command: The delete user command.
+
+        Returns:
+            True if user was deleted.
+
+        Raises:
+            UserNotFoundError: If user is not found.
+        """
+        # Check if user exists
         user = await self.user_repository.get_by_id(command.user_id)
         if not user:
             raise UserNotFoundError(f"User with id '{command.user_id}' not found")
 
         self.logger.info(f"Deleting user: {user.username}")
 
-        # 软删除并挂载领域事件
-        user.mark_as_deleted()
+        # Use entity method for soft delete and domain event
         from domain.users.events import UserDeletedEvent
-        user._add_domain_event(UserDeletedEvent(
-            user_id=user.id,
-            username=user.username,
-        ))
 
-        # 仓储负责执行软删除并发布领域事件
+        user.mark_as_deleted()
+        user.add_domain_event(
+            UserDeletedEvent(
+                user_id=user.id,
+                username=user.username,
+            )
+        )
+
+        # Repository is responsible for executing soft delete and publishing events
         return await self.user_repository.delete(user)

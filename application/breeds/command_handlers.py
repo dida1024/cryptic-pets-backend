@@ -3,7 +3,6 @@
 实现CQRS模式的命令部分，处理写操作
 """
 
-from uuid import uuid4
 
 from loguru import logger
 
